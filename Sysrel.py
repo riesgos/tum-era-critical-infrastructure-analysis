@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 """
+Python module for system reliability. Contains the functions directly called by the main file:
+    - Load Network Data: Creates a graph object based on the line exposure and node damage information (i.e. prob. of failure). 
+    Network fragility defines which node taxonomy corresponds to source and consumer nodes
+    - Evaluate System Loads: estimates the loads at nodes and edges, based on shortest path algorithm between source and consumer nodes
+    - Assign Initial Capacities: assign capacities to nodes and edges based on precomputed loads and a given safety factor
+    - Monte Carlo Simulation: simulates the hazard action and cascading effects for multiple random nodal damage states
+    - Compute output: based on the samples, returns sample of global values (total affected population) and probability of affectation for 
+    each consumer area
+
 Created on Tue Aug 13 10:52:00 2019
 
 @author: hfrv2
@@ -23,8 +32,8 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     NodeBunch={NodesFea[i][cons.PROPERTIES][cons.NODE_NAME]:{
             cons.TAXONOMY:'',
             cons.COORDINATES:NodesFea[i][cons.GEOMETRY][cons.COORDINATES],
-            cons.DAMAGE:0.0,
-            cons.DELTADAMAGE:0.0,
+            cons.NODE_DAMAGE:0.0,
+            cons.NODE_DELTADAMAGE:0.0,
             cons.NODE_POF:0.0
             } for i in range(0,len(NodesFea))}
     EdgeBunch=[(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO],{
@@ -33,8 +42,8 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
             cons.COORDINATES:EdgesFea[i][cons.GEOMETRY][cons.COORDINATES],
             cons.VOLTAGE:1.0,
             cons.WEIGHT:1.0,
-            cons.DAMAGE:0.0,
-            cons.DELTADAMAGE:0.0
+            cons.LINE_DAMAGE:0.0,
+            cons.LINE_DELTADAMAGE:0.0
             }) for i in range(0,len(EdgesFea))]
     G.add_edges_from(EdgeBunch)
     del EdgeBunch
@@ -49,11 +58,11 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     #set edge attributes (only from 'properties' key)
     for attr in EdgesFea[0][cons.PROPERTIES].keys():
         EdgeAttr={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):{attr:EdgesFea[i][cons.PROPERTIES][attr]} for i in range(0,len(EdgesFea))}
-        nx.set_node_attributes(G,EdgeAttr)
+        nx.set_edge_attributes(G,EdgeAttr)
     #update the weights
     EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
         {cons.WEIGHT:1/(float(EdgesFea[i][cons.PROPERTIES][cons.VOLTAGE])*float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH]))} for i in range(0,len(EdgesFea))}
-    nx.set_node_attributes(G,EdgeWeights)
+    nx.set_edge_attributes(G,EdgeWeights)
     # create a dictionary of node lists by taxonomy
     Types=nx.get_node_attributes(G,cons.NODE_TYPE)
     node_types={typ:[nod for nod in G.nodes() if Types[nod]==typ] for typ in node_types_keys}
@@ -124,7 +133,7 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
         ns.direct_hazard_action(NetG)
         
         # store coponent damage states
-        i_component_state_dha={cons.NODES:nx.get_node_attributes(NetG,cons.DAMAGE),cons.EDGES:nx.get_edge_attributes(NetG,cons.DAMAGE)}
+        i_component_state_dha={cons.NODES:nx.get_node_attributes(NetG,cons.NODE_DAMAGE),cons.EDGES:nx.get_edge_attributes(NetG,cons.LINE_DAMAGE)}
         #component_state_dha.append(i_component_state_dha)
         
         # Update network description (weights and capacities)
@@ -146,15 +155,16 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
             
         # Save Results
         #component_state_idp.append(i_component_state_casc)
-        i_affected_areas=ns.set_state_consumers(ExposureConsumerAreas,Graph)
+        i_affected_areas=ns.set_state_consumers(ExposureConsumerAreas,NetG)
         affected_areas.append(i_affected_areas)
+        print("MCS iteration: "+str(i))
                      
     return affected_areas
 
 
 #Post Processing
 def compute_output(SampleDamageAreas,ExposureConsumerAreas,nmcs):
-    SampleDamageNetwork=[np.sum([SampleDamageAreas[i][i_area]*ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_HOUSEHOLDS]
+    SampleDamageNetwork=[np.sum([SampleDamageAreas[i][i_area]*ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_POPULATION]
     for i_area in range(0,len(SampleDamageAreas[0]))]) for i in range(0,nmcs)]
     for i_area in range(0,len(ExposureConsumerAreas[cons.FEATURES])):
         est_apof=np.mean([SampleDamageAreas[i][i_area]for i in range(0,nmcs)])

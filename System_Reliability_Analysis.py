@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
 """
+
+WPS that performs a reliability analysis on one critical infrastructure network with Monte Carlo Simulation.
+
+This service uses the probability of failure at nodes for estimating the affectation to population 
+(i.e. people affected by supply disruption).
+
+Input data: 
+    -Nodal exposure and damage (probability of failure at each node)
+    -Network fragility (which taxonomies are source and consumer nodes?)
+    -Line exposure (how are the nodes connected?)
+    -Consumer Areas exposure (how many people is supplied by which lines?)
+
+Output data:
+    -Consumer Areas damage (probability of each area to have supply disruption)
+    -Random sample of total affected population (raw data for performing statistics and plots)
 Created on Mon Mar 11 18:12:00 2019
 
 @author: hfrv2
@@ -67,4 +82,4 @@ def run(DamageNodes=None,ExposureLines=None,ExposureConsumerAreas=None,NetworkFr
         return DamageConsumerAreas,SampleDamageNetwork
     
     if __name__ == '__main__':
-        main()
+        return main()
