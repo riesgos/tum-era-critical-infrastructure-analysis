@@ -75,38 +75,9 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
 # evaluation of system loads
 # load is computed as the number of shortest paths that pass through the component (node or edge)
 def evaluate_system_loads(G,s_nodes,c_nodes):
-
-    loads_initial={}
-    edge_loads_initial={}   
-    # Determine shortest path between all source and target nodes and set
-    # the nr of shortest paths passing through each node in network as
-    # initialize loads with 1 for assigning a minimum non zero capacity to each component
-    loads_initial={no:1 for no in G.nodes()}
-    edge_loads_initial={ed:1 for ed in G.edges()}
-    # evaluate inital origin-destination betweenness centrality
-    # determine initial number of connecting paths from all source node to
-    # each supply node
-    for s_node in s_nodes:
-        for c_node in c_nodes:
-            path_list=nx.all_shortest_paths(G,s_node,c_node,weight=cons.WEIGHT)
-            path_list=list(path_list)               
-            if len(path_list)>0:
-                for a_path in path_list:
-                    for node in G.nodes():
-                        if node in a_path:
-                            loads_initial[node]+=1
-                    for edge in G.edges():
-                        if ns.is_edge_in_path(edge,a_path):
-                            edge_loads_initial[edge]+=1
-    
-    # calculate initial capacity of each node using alpha factors
-    node_attribs={no:{cons.LOAD:loads_initial[no]} for no in G.nodes()}
-    edge_attribs={ed:{cons.LOAD:edge_loads_initial[ed]} for ed in G.edges()}
-    nx.set_node_attributes(G,node_attribs)
-    nx.set_edge_attributes(G,edge_attribs)
+    ns.evaluate_system_loads(G,s_nodes,c_nodes)
 
 #Assign component capacities
-
 def assign_initial_capacities(G,alpha):
     node_caps={no:{cons.CAPACITY:alpha*G.node[no][cons.LOAD]} for no in G.nodes()}
     edge_caps={ed:{cons.CAPACITY:alpha*G.edges[ed][cons.LOAD]} for ed in G.edges()}

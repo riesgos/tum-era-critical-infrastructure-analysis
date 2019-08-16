@@ -73,6 +73,7 @@ if __name__ == '__main__':
     ExposureLines=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureLines.geojson')
     ExposureConsumerAreas=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureConsumerAreas.geojson')
     NetworkFragility=import_json_to_dict(folder_prefix+'\\NetworkFragility.json')
+    # execute main function
     DamageConsumerAreas,SampleDamageNetwork = main()
     # save consumer areas output as geojson file
     save_to_JSON(DamageConsumerAreas,folder_prefix+'\\E1_EPN_ExposureConsumerAreas_withDamage.geojson')
@@ -84,3 +85,4 @@ if __name__ == '__main__':
     plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
     plt.grid(True)
     plt.show()
+    print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
