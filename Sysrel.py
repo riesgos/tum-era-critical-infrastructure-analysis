@@ -164,8 +164,8 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
 
 #Post Processing
 def compute_output(SampleDamageAreas,ExposureConsumerAreas,nmcs):
-    SampleDamageNetwork=[np.sum([SampleDamageAreas[i][i_area]*ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_POPULATION]
-    for i_area in range(0,len(SampleDamageAreas[0]))]) for i in range(0,nmcs)]
+    SampleDamageNetwork=[int(np.sum([SampleDamageAreas[i][i_area]*ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_POPULATION]
+    for i_area in range(0,len(SampleDamageAreas[0]))])) for i in range(0,nmcs)]
     for i_area in range(0,len(ExposureConsumerAreas[cons.FEATURES])):
         est_apof=np.mean([SampleDamageAreas[i][i_area]for i in range(0,nmcs)])
         ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_POF]=est_apof

@@ -1,6 +1,6 @@
 {
 "type": "FeatureCollection",
-"name": "C1_EPN_ExposureNodes",
+"name": "C1_EPN_ExposureNodes_withDamage",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32719" } },
 "features": [
 { "type": "Feature", "properties": { "FID": 0, "Name_Node": "S\/E NUEVA VENTANAS", "taxonomy": "Power Plant", "Longitude": 267425.2161, "Latitude": 6373791.3740999997, "ProbFailure": 0.838649 }, "geometry": { "type": "Point", "coordinates": [ 267425.216099999845028, 6373791.374099999666 ] } },

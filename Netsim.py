@@ -48,17 +48,21 @@ def update_network(G,s_nodes,c_nodes):
             if node in c_nodes:
                 c_nodes.remove(node)
             G.node[node][cons.CAPACITY]=0.0
+            # damaged node also makes its edges unavailable
+            for edge in G.edges(node):
+               G.edges[edge][cons.WEIGHT]=1/cons.EPS 
+                
         #otherwise, only reduce capacity
         else:
             G.node[node][cons.CAPACITY]-=G.node[node][cons.NODE_DELTADAMAGE]*G.node[node][cons.CAPACITY]
             #we already applied the damage increment
-            G.node[node][cons.NODE_DELTADAMAGE]=0
+            G.node[node][cons.NODE_DELTADAMAGE]=0.0
     # now, increase edge cost and reduce their capacities
     for edge in G.edges():
         G.edges[edge][cons.CAPACITY]-=G.edges[edge][cons.LINE_DELTADAMAGE]*G.edges[edge][cons.CAPACITY]
         G.edges[edge][cons.WEIGHT]/=max(1-G.edges[edge][cons.LINE_DELTADAMAGE],cons.EPS)
         #we already applied the damage increment
-        G.edges[edge][cons.LINE_DELTADAMAGE]=0
+        G.edges[edge][cons.LINE_DELTADAMAGE]=0.0
 
 
 #   CASCADING EFFECTS
@@ -85,6 +89,7 @@ def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
             if n_caps[node]>cons.EPS:
                 n_ratio=n_loads[node]/n_caps[node]
                 if n_ratio>1:
+                    #print('Casc effects nodes')
                     #reduce capacity and store de damage increment
                     n_state=1-G.nodes[node][cons.NODE_DAMAGE]
                     #update the damage level
@@ -100,10 +105,11 @@ def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
             if e_caps[edge]>cons.EPS:
                 e_ratio=e_loads[edge]/e_caps[edge]
                 if e_ratio>1:
+                    #print('Casc effects edges')
                     #reduce capacity and store de damage increment
-                    e_state=1-G.edge[edge][cons.LINE_DAMAGE]
+                    e_state=1-G.edges[edge][cons.LINE_DAMAGE]
                     #update the damage level
-                    G.edge[edge][cons.LINE_DAMAGE]=1-(1/e_ratio)*e_state
+                    G.edges[edge][cons.LINE_DAMAGE]=1-(1/e_ratio)*e_state
                     #store the damage increment
                     if e_state<cons.EPS:
                         G.edges[edge][cons.LINE_DELTADAMAGE]=e_state
@@ -120,8 +126,8 @@ def set_state_consumers(ExposureConsumerAreas,Graph):
     areas_damage=[]
     for i in range(0,len(ExposureConsumerAreas[cons.FEATURES])):
         key_a_name=ExposureConsumerAreas[cons.FEATURES][i][cons.PROPERTIES][cons.AREA_NAME]
-        supply_edge_dam=[Graph.edges[ed][cons.LINE_DAMAGE] for ed in Graph.edges() if Graph.edges[ed][cons.TO]==key_a_name]
-        if len(supply_edge_dam)>0:
+        if len(Graph.edges(key_a_name))>0:
+            supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]
             areas_damage.append(np.mean(supply_edge_dam))
         else:#it is an isolated consumer area
             areas_damage.append(0)

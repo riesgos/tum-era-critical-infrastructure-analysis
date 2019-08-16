@@ -1,6 +1,6 @@
 {
 "type": "FeatureCollection",
-"name": "E1_EPN_ExposureNodes",
+"name": "E1_EPN_ExposureNodes_withDamage",
 "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32717" } },
 "features": [
 { "type": "Feature", "properties": { "FID": 4, "VPRIMARIO": 69.0, "VSECUNDARI": 13.8, "Name_Node": "LASSO", "taxonomy": "Substation", "ProbFailure": 0.99115 }, "geometry": { "type": "Point", "coordinates": [ 766104.772625000216067, 9917642.46387499943376 ] } },

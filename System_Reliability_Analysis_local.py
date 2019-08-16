@@ -25,6 +25,8 @@ Created on Wed Aug 14 11:15:58 2019
 import Sysrel as sr 
 import json
 import os
+import matplotlib.pyplot as plt
+import numpy as np
 
 ########## -------------------------------------------------------------------- #################
 ########## --------------------------MAIN FUNCTION----------------------------- #################        
@@ -54,14 +56,31 @@ def import_json_to_dict(filename):
         data=json.loads(s)
     return data
 
+# SAVE ANALYSIS IN GEOJSON FILE
+# creates a geojson file with the information of the input geojson files (resp. CSV), plus the attributes created during the analysis (such as fragility parameters and damage level)
+def save_to_JSON(DataOutDict,filename):
+    with open(filename, 'w') as outfile:
+        json.dump(DataOutDict, outfile)
+ 
+
 # Local execution
 if __name__ == '__main__':
     ##### ----------------------------- location of input files----------------------------------------########
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
-    DamageNodes=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureNodes.geojson')
+    DamageNodes=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureNodes_withDamage.geojson')
     ExposureLines=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureLines.geojson')
     ExposureConsumerAreas=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureConsumerAreas.geojson')
     NetworkFragility=import_json_to_dict(folder_prefix+'\\NetworkFragility.json')
     DamageConsumerAreas,SampleDamageNetwork = main()
+    # save consumer areas output as geojson file
+    save_to_JSON(DamageConsumerAreas,folder_prefix+'\\E1_EPN_ExposureConsumerAreas_withDamage.geojson')
+    # make a histogram with the output vector of total affected population
+    SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
+    plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
+    plt.xlabel('Affected population / Población afectada (thousands/miles)')
+    plt.ylabel('Probability / Probabilidad')
+    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
+    plt.grid(True)
+    plt.show()
