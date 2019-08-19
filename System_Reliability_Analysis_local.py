@@ -25,7 +25,7 @@ Created on Wed Aug 14 11:15:58 2019
 import Sysrel as sr 
 import json
 import os
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 
 ########## -------------------------------------------------------------------- #################
@@ -69,20 +69,20 @@ if __name__ == '__main__':
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
-    DamageNodes=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureNodes_withDamage.geojson')
-    ExposureLines=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureLines.geojson')
-    ExposureConsumerAreas=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureConsumerAreas.geojson')
-    NetworkFragility=import_json_to_dict(folder_prefix+'\\NetworkFragility.json')
+    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureNodes_withDamage.geojson'))
+    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureLines.geojson'))
+    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
+    NetworkFragility=import_json_to_dict(os.path.join(folder_prefix, 'NetworkFragility.json'))
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = main()
     # save consumer areas output as geojson file
-    save_to_JSON(DamageConsumerAreas,folder_prefix+'\\E1_EPN_ExposureConsumerAreas_withDamage.geojson')
+    save_to_JSON(DamageConsumerAreas,os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
     # make a histogram with the output vector of total affected population
-    SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
-    plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
-    plt.xlabel('Affected population / Población afectada (thousands/miles)')
-    plt.ylabel('Probability / Probabilidad')
-    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
-    plt.grid(True)
-    plt.show()
-    print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
+    # SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
+    # plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
+    # plt.xlabel('Affected population / Población afectada (thousands/miles)')
+    # plt.ylabel('Probability / Probabilidad')
+    # plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
+    # plt.grid(True)
+    # plt.show()
+    # print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
