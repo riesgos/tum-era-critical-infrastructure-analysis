@@ -1,7 +1,6 @@
 {
 "type": "FeatureCollection",
 "name": "E1_EPN_ExposureNodes_withDamage",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
 { "type": "Feature", "properties": { "FID": 4, "Name_Node": "LASSO", "taxonomy": "Substation", "ProbFailure": 0.99115 }, "geometry": { "type": "Point", "coordinates": [ -78.609081709665645, -0.744461088246209 ] } },
 { "type": "Feature", "properties": { "FID": 5, "Name_Node": "SIGCHOS", "taxonomy": "Power Plant", "ProbFailure": 0.84991 }, "geometry": { "type": "Point", "coordinates": [ -78.884689926470301, -0.701351211838909 ] } },
