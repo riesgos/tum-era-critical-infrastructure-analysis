@@ -61,7 +61,18 @@ def import_json_to_dict(filename):
 def save_to_JSON(DataOutDict,filename):
     with open(filename, 'w') as outfile:
         json.dump(DataOutDict, outfile)
- 
+
+def make_histogram(SampleDamageNetwork):
+    # make a histogram with the output vector of total affected population
+    SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
+    plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
+    plt.xlabel('Affected population / Población afectada (thousands/miles)')
+    plt.ylabel('Probability / Probabilidad')
+    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
+    plt.grid(True)
+    plt.show()
+    print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
+
 
 # Local execution
 if __name__ == '__main__':
@@ -77,12 +88,4 @@ if __name__ == '__main__':
     DamageConsumerAreas,SampleDamageNetwork = main()
     # save consumer areas output as geojson file
     save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
-    # make a histogram with the output vector of total affected population
-    SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
-    plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
-    plt.xlabel('Affected population / Población afectada (thousands/miles)')
-    plt.ylabel('Probability / Probabilidad')
-    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
-    plt.grid(True)
-    plt.show()
-    print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
+    #make_histogram(SampleDamageNetwork)
