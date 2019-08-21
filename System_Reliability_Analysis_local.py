@@ -28,10 +28,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-########## -------------------------------------------------------------------- #################
-########## --------------------------MAIN FUNCTION----------------------------- #################        
-########## -------------------------------------------------------------------- #################
-def main():
+def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas):
     ##### ----------------------------- Load network data -------------------------------########
     Graph,source_nodes,consumer_nodes=sr.load_network_data(DamageNodes,ExposureLines,NetworkFragility)
     ##### --------------------- Assess unperturbed system and capacities ----------------########
@@ -46,7 +43,7 @@ def main():
     DamageConsumerAreas,SampleDamageNetwork=sr.compute_output(SampleAreas,ExposureConsumerAreas,nmcs)
         
     return DamageConsumerAreas,SampleDamageNetwork
-    
+
 # IMPORT JSON FILES AND CREATE DICTIONARY
 def import_json_to_dict(filename):
     data={}
@@ -73,9 +70,7 @@ def make_histogram(SampleDamageNetwork):
     plt.show()
     print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
 
-
-# Local execution
-if __name__ == '__main__':
+def main():
     ##### ----------------------------- location of input files----------------------------------------########
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
@@ -85,7 +80,10 @@ if __name__ == '__main__':
     ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
     NetworkFragility=import_json_to_dict(os.path.join(folder_prefix, 'NetworkFragility.json'))
     # execute main function
-    DamageConsumerAreas,SampleDamageNetwork = main()
+    DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
     # save consumer areas output as geojson file
     save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
     #make_histogram(SampleDamageNetwork)
+
+if __name__ == '__main__':
+    main()
