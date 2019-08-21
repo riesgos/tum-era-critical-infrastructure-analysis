@@ -22,11 +22,14 @@ Created on Wed Aug 14 11:15:58 2019
 @author: hfrv2
 """
 
-import Sysrel as sr 
+import argparse
 import json
 import os
-import matplotlib.pyplot as plt
+
 import numpy as np
+import matplotlib.pyplot as plt
+
+import Sysrel as sr
 
 def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas):
     ##### ----------------------------- Load network data -------------------------------########
@@ -72,6 +75,15 @@ def make_histogram(SampleDamageNetwork):
 
 def main():
     ##### ----------------------------- location of input files----------------------------------------########
+
+    argparser = argparse.ArgumentParser(
+        description='Script to compute the probability of disruption given a shakemap')
+    argparser.add_argument(
+        'intensity_file',
+        help='File with the hazard intensities, for example a shakemap')
+
+    args = argparser.parse_args()
+    
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
