@@ -69,14 +69,14 @@ if __name__ == '__main__':
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
-    DamageNodes=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureNodes_withDamage.geojson')
-    ExposureLines=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureLines.geojson')
-    ExposureConsumerAreas=import_json_to_dict(folder_prefix+'\\E1_EPN_ExposureConsumerAreas.geojson')
-    NetworkFragility=import_json_to_dict(folder_prefix+'\\NetworkFragility.json')
+    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureNodes_withDamage.geojson'))
+    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureLines.geojson'))
+    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
+    NetworkFragility=import_json_to_dict(os.path.join(folder_prefix, 'NetworkFragility.json'))
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = main()
     # save consumer areas output as geojson file
-    save_to_JSON(DamageConsumerAreas,folder_prefix+'\\E1_EPN_ExposureConsumerAreas_withDamage.geojson')
+    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
     # make a histogram with the output vector of total affected population
     SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
     plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
