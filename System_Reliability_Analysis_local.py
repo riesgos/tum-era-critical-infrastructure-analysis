@@ -22,6 +22,8 @@ Created on Wed Aug 14 11:15:58 2019
 @author: hfrv2
 """
 
+import pdb
+
 import argparse
 import json
 import os
@@ -29,6 +31,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
+import shakemap
+import fragility
 import Sysrel as sr
 
 def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas):
@@ -90,7 +94,16 @@ def main():
     DamageNodes=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureNodes_withDamage.geojson'))
     ExposureLines=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureLines.geojson'))
     ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
-    NetworkFragility=import_json_to_dict(os.path.join(folder_prefix, 'NetworkFragility.json'))
+
+    fragility_file = os.path.join(folder_prefix, 'NetworkFragility.json')
+    NetworkFragility=import_json_to_dict(fragility_file)
+
+    intensity_provider = shakemap.Shakemaps.from_file(args.intensity_file).to_intensity_provider()
+    fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
+    
+
+    pdb.set_trace()
+    
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
     # save consumer areas output as geojson file
