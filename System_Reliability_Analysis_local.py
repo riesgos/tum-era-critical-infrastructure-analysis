@@ -22,12 +22,11 @@ Created on Wed Aug 14 11:15:58 2019
 @author: hfrv2
 """
 
-import pdb
-
 import argparse
 import json
 import os
 
+import shapely.geometry
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -85,29 +84,52 @@ def main():
     argparser.add_argument(
         'intensity_file',
         help='File with the hazard intensities, for example a shakemap')
+    argparser.add_argument(
+        'country',
+        help='Country for which the simulation should be done. Supported: chile, ecuador')
 
     args = argparser.parse_args()
-    
+
+    prefixes_by_country = {
+        'chile': 'C1',
+        'ecuador': 'E1',
+    }
+
+    if args.country not in prefixes_by_country.keys():
+        raise Exception('{0} is not a supported country'.format(args.country))
+
+    country_prefix = prefixes_by_country[args.country]
+        
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
-    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureNodes_withDamage.geojson'))
-    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureLines.geojson'))
-    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
+    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureNodes.geojson'))
+    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureLines.geojson'))
+    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas.geojson'))
 
     fragility_file = os.path.join(folder_prefix, 'NetworkFragility.json')
     NetworkFragility=import_json_to_dict(fragility_file)
 
     intensity_provider = shakemap.Shakemaps.from_file(args.intensity_file).to_intensity_provider()
     fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
-    
 
-    pdb.set_trace()
+    # add the fragility value for the element in the field "ProbFailure"
+
+    for feature in DamageNodes['features']:
+        centroid = shapely.geometry.shape(feature['geometry']).centroid
+        lon, lat = centroid.x, centroid.y
+
+        intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
+        # there is just one damage state for each taxonomy
+        damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
+        p = damage_state.get_probability_for_intensity(intensity, units)
+        feature['properties']['ProbFailure'] = p
+
     
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
     # save consumer areas output as geojson file
-    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
+    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas_withDamage.geojson'))
     #make_histogram(SampleDamageNetwork)
 
 if __name__ == '__main__':
