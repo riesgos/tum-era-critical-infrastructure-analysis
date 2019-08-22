@@ -90,6 +90,9 @@ def main():
     argparser.add_argument(
         '--hazard',
         help='Hazard for chosing the fragility functions. Supported: earthquake, lahar')
+    argparser.add_argument(
+        '--output_file',
+        help='Name of the output file for the consumer areas with damage.')
 
     args = argparser.parse_args()
 
@@ -141,8 +144,13 @@ def main():
     
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
+
+    if args.output_file is None:
+        output_filename = country_prefix + '_EPN_ExposureConsumerAreas_withDamage.geojson'
+    else:
+        output_filename = args.output_file
     # save consumer areas output as geojson file
-    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas_withDamage.geojson'))
+    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, output_filename))
     #make_histogram(SampleDamageNetwork)
 
 if __name__ == '__main__':
