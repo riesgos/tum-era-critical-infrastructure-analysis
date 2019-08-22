@@ -82,14 +82,22 @@ def main():
     argparser = argparse.ArgumentParser(
         description='Script to compute the probability of disruption given a shakemap')
     argparser.add_argument(
-        'intensity_file',
+        '--intensity_file',
         help='File with the hazard intensities, for example a shakemap')
     argparser.add_argument(
-        'country',
+        '--country',
         help='Country for which the simulation should be done. Supported: chile, ecuador')
+    argparser.add_argument(
+        '--hazard',
+        help='Hazard for chosing the fragility functions. Supported: earthquake, lahar')
 
     args = argparser.parse_args()
 
+    prefixes_by_hazard = {
+        'earthquake': 'EQ',
+        'lahar': 'LH'
+    }
+    
     prefixes_by_country = {
         'chile': 'C1',
         'ecuador': 'E1',
@@ -99,6 +107,11 @@ def main():
         raise Exception('{0} is not a supported country'.format(args.country))
 
     country_prefix = prefixes_by_country[args.country]
+
+    if args.hazard not in prefixes_by_hazard.keys():
+        raise Exception('{0} is not a supported hazard'.format(args.hazard))
+
+    fragility_file_prefix = prefixes_by_hazard[args.hazard]
         
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
@@ -107,7 +120,7 @@ def main():
     ExposureLines=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureLines.geojson'))
     ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas.geojson'))
 
-    fragility_file = os.path.join(folder_prefix, 'NetworkFragility.json')
+    fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
     NetworkFragility=import_json_to_dict(fragility_file)
 
     intensity_provider = shakemap.Shakemaps.from_file(args.intensity_file).to_intensity_provider()
