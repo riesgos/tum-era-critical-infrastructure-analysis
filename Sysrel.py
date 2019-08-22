@@ -59,9 +59,9 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     for attr in EdgesFea[0][cons.PROPERTIES].keys():
         EdgeAttr={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):{attr:EdgesFea[i][cons.PROPERTIES][attr]} for i in range(0,len(EdgesFea))}
         nx.set_edge_attributes(G,EdgeAttr)
-    #update the weights
+    #update the weights (weight~length/voltage)
     EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
-        {cons.WEIGHT:1/(float(EdgesFea[i][cons.PROPERTIES][cons.VOLTAGE])*float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH]))} for i in range(0,len(EdgesFea))}
+        {cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])/(float(EdgesFea[i][cons.PROPERTIES][cons.VOLTAGE]))} for i in range(0,len(EdgesFea))}
     nx.set_edge_attributes(G,EdgeWeights)
     # create a dictionary of node lists by taxonomy
     Types=nx.get_node_attributes(G,cons.NODE_TYPE)
@@ -91,7 +91,7 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
     #component_state_idp=[]
     #store samples of affected areas in a list
     affected_areas=[]
-    max_iteration=10#max number of iterations in simulation of cascading effects
+    max_iteration=5#max number of iterations in simulation of cascading effects
     for i in range(0,mcs):
         i_component_state_dha={}
         #i_component_state_casc={}

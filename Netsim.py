@@ -71,23 +71,31 @@ def evaluate_system_loads(G,s_nodes,c_nodes):
     # Determine shortest path between all source and target nodes and set
     # the nr of shortest paths passing through each node in network as
     # initialize loads with 1 for assigning a minimum non zero capacity to each component
-    loads_initial={no:1 for no in G.nodes()}
-    edge_loads_initial={ed:1 for ed in G.edges()}
+    #loads_initial={no:1 for no in G.nodes()}
+    #edge_loads_initial={ed:1 for ed in G.edges()}
     # evaluate inital origin-destination betweenness centrality
     # determine initial number of connecting paths from all source node to
     # each supply node
-    for s_node in s_nodes:
-        for c_node in c_nodes:
-            path_list=nx.all_shortest_paths(G,s_node,c_node,weight=cons.WEIGHT)
-            path_list=list(path_list)               
-            if len(path_list)>0:
-                for a_path in path_list:
-                    for node in G.nodes():
-                        if node in a_path:
-                            loads_initial[node]+=1
-                    for edge in G.edges():
-                        if is_edge_in_path(edge,a_path):
-                            edge_loads_initial[edge]+=1
+    #print('\t start load evaluation')
+    #path_dict=nx.shortest_path(G,weight=cons.WEIGHT)
+    #i_s=0
+    param_k=min(50,len(G.nodes()))
+    loads_initial=nx.betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
+    edge_loads_initial=nx.edge_betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
+    #for s_node in s_nodes:
+        #print('\t source node Nr. '+str(i_s))
+        #i_s=i_s+1
+        #for c_node in c_nodes: 
+            #try:
+                #a_path=path_dict[s_node][c_node] 
+            #except:
+                #continue
+            #for node in G.nodes():
+                #if node in a_path:
+                    #loads_initial[node]+=1
+            #for edge in G.edges():
+                #if is_edge_in_path(edge,a_path):
+                    #edge_loads_initial[edge]+=1
     
     # calculate initial capacity of each node using alpha factors
     node_attribs={no:{cons.LOAD:loads_initial[no]} for no in G.nodes()}
