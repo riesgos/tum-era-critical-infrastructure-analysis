@@ -7,6 +7,7 @@ the access to shakemap data.
 
 import collections
 import io
+import math
 import tokenize
 
 import lxml.etree as le
@@ -42,9 +43,23 @@ class TsunamiShakemap():
         grid_fields = self._find_grid_fields()
         grid_data = self._find_grid_data()
 
+        # I used the example shakemap that
+        # Alireza sent me
+        # I converted it into a point layer
+        # and estimated this distance
+        # to be distance after that
+        # there are at least two other points
+        # in that grid in between
+        # in that way it is possible to
+        # use the nearest values
+        # and we can still assume that we only take
+        # data where points are given in the
+        # irregular tsunami shakemaps
+        max_dist = 0.0003
         return ShakemapIntensityProvider(
             grid_fields, grid_data,
-            'longitude'.upper(), 'latitude'.upper())
+            'longitude'.upper(), 'latitude'.upper(),
+            max_dist)
 
 
 class Shakemaps():
@@ -86,6 +101,14 @@ class EqShakemap():
             '{http://earthquake.usgs.gov/eqcenter/shakemap}grid_data')
         return ShakemapGridData(grid_data)
 
+    def _find_lon_lat_spacing(self):
+        grid_specification = self._root.find(
+            '{http://earthquake.usgs.gov/eqcenter/shakemap}grid_specification')
+        nominal_lat_spacing = grid_specification.get('nominal_lat_spacing')
+        nominal_lon_spacing = grid_specification.get('nominal_lon_spacing')
+
+        return float(nominal_lon_spacing), float(nominal_lat_spacing)
+
     def to_intensity_provider(self):
         '''
         Returns an instance to access the data point
@@ -94,8 +117,12 @@ class EqShakemap():
         grid_fields = self._find_grid_fields()
         grid_data = self._find_grid_data()
 
+        lon_spacing, lat_spacing = self._find_lon_lat_spacing()
+
+        max_dist = 2.1 * math.sqrt(lon_spacing**2 + lat_spacing**2)
+
         return ShakemapIntensityProvider(
-            grid_fields, grid_data, 'LON', 'LAT')
+            grid_fields, grid_data, 'LON', 'LAT', max_dist)
 
 
 class ShakemapGridField():
@@ -146,7 +173,13 @@ class ShakemapIntensityProvider():
     Class to give access to the nearest value to a given
     location.
     '''
-    def __init__(self, grid_fields, grid_data, lon_name, lat_name):
+    def __init__(
+            self,
+            grid_fields,
+            grid_data,
+            lon_name,
+            lat_name,
+            max_dist):
         names = [x.get_name().upper() for x in grid_fields]
         units = {x.get_name().upper(): x.get_units() for x in grid_fields}
         data = collections.defaultdict(list)
@@ -178,6 +211,7 @@ class ShakemapIntensityProvider():
         self._names = names
         self._data = data
         self._units = units
+        self._max_dist = max_dist
 
     def get_nearest(self, lon, lat):
         '''
@@ -187,11 +221,15 @@ class ShakemapIntensityProvider():
         Both together are returned as a tuple.
         '''
         coord = np.array([lon, lat])
-        _, idx = self._spatial_index.query(coord, k=1)
+        dist, idx = self._spatial_index.query(coord, k=1)
 
         data = {}
 
         for name in self._names:
-            data[name] = self._data[name][idx]
+            if dist > self._max_dist:
+                value = 0
+            else:
+                value = self._data[name][idx]
+            data[name] = value
 
         return data, self._units
