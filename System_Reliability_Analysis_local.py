@@ -22,16 +22,19 @@ Created on Wed Aug 14 11:15:58 2019
 @author: hfrv2
 """
 
-import Sysrel as sr 
+import argparse
 import json
 import os
-# import matplotlib.pyplot as plt
-import numpy as np
 
-########## -------------------------------------------------------------------- #################
-########## --------------------------MAIN FUNCTION----------------------------- #################        
-########## -------------------------------------------------------------------- #################
-def main():
+import shapely.geometry
+import numpy as np
+import matplotlib.pyplot as plt
+
+import shakemap
+import fragility
+import Sysrel as sr
+
+def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas):
     ##### ----------------------------- Load network data -------------------------------########
     Graph,source_nodes,consumer_nodes=sr.load_network_data(DamageNodes,ExposureLines,NetworkFragility)
     ##### --------------------- Assess unperturbed system and capacities ----------------########
@@ -46,7 +49,7 @@ def main():
     DamageConsumerAreas,SampleDamageNetwork=sr.compute_output(SampleAreas,ExposureConsumerAreas,nmcs)
         
     return DamageConsumerAreas,SampleDamageNetwork
-    
+
 # IMPORT JSON FILES AND CREATE DICTIONARY
 def import_json_to_dict(filename):
     data={}
@@ -61,28 +64,94 @@ def import_json_to_dict(filename):
 def save_to_JSON(DataOutDict,filename):
     with open(filename, 'w') as outfile:
         json.dump(DataOutDict, outfile)
- 
 
-# Local execution
-if __name__ == '__main__':
+def make_histogram(SampleDamageNetwork):
+    # make a histogram with the output vector of total affected population
+    SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
+    plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
+    plt.xlabel('Affected population / Población afectada (thousands/miles)')
+    plt.ylabel('Probability / Probabilidad')
+    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
+    plt.grid(True)
+    plt.show()
+    print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
+
+def main():
     ##### ----------------------------- location of input files----------------------------------------########
+
+    argparser = argparse.ArgumentParser(
+        description='Script to compute the probability of disruption given a shakemap')
+    argparser.add_argument(
+        '--intensity_file',
+        help='File with the hazard intensities, for example a shakemap')
+    argparser.add_argument(
+        '--country',
+        help='Country for which the simulation should be done. Supported: chile, ecuador')
+    argparser.add_argument(
+        '--hazard',
+        help='Hazard for chosing the fragility functions. Supported: earthquake, lahar')
+    argparser.add_argument(
+        '--output_file',
+        help='Name of the output file for the consumer areas with damage.')
+
+    args = argparser.parse_args()
+
+    prefixes_by_hazard = {
+        'earthquake': 'EQ',
+        'lahar': 'LH'
+    }
+    
+    prefixes_by_country = {
+        'chile': 'C1',
+        'ecuador': 'E1',
+    }
+
+    if args.country not in prefixes_by_country.keys():
+        raise Exception('{0} is not a supported country'.format(args.country))
+
+    country_prefix = prefixes_by_country[args.country]
+
+    if args.hazard not in prefixes_by_hazard.keys():
+        raise Exception('{0} is not a supported hazard'.format(args.hazard))
+
+    fragility_file_prefix = prefixes_by_hazard[args.hazard]
+        
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
     # Exposure data from Ecuador
-    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureNodes_withDamage.geojson'))
-    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureLines.geojson'))
-    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas.geojson'))
-    NetworkFragility=import_json_to_dict(os.path.join(folder_prefix, 'NetworkFragility.json'))
+    DamageNodes=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureNodes.geojson'))
+    ExposureLines=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureLines.geojson'))
+    ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas.geojson'))
+
+    fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
+    NetworkFragility=import_json_to_dict(fragility_file)
+
+    intensity_provider = shakemap.Shakemaps.from_file(args.intensity_file).to_intensity_provider()
+    fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
+
+    # add the fragility value for the element in the field "ProbFailure"
+
+    for feature in DamageNodes['features']:
+        centroid = shapely.geometry.shape(feature['geometry']).centroid
+        lon, lat = centroid.x, centroid.y
+
+        intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
+        # there is just one damage state for each taxonomy
+        damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
+        p = damage_state.get_probability_for_intensity(intensity, units)
+        feature['properties']['ProbFailure'] = p
+
+    
     # execute main function
-    DamageConsumerAreas,SampleDamageNetwork = main()
+    DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
+
+    if args.output_file is None:
+        output_filename = country_prefix + '_EPN_ExposureConsumerAreas_withDamage.geojson'
+    else:
+        output_filename = args.output_file
     # save consumer areas output as geojson file
-    save_to_JSON(DamageConsumerAreas,os.path.join(folder_prefix, 'E1_EPN_ExposureConsumerAreas_withDamage.geojson'))
-    # make a histogram with the output vector of total affected population
-    # SampleDamageNetwork_1000=[SampleDamageNetwork[i]/1000 for i in range(0,len(SampleDamageNetwork))]
-    # plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
-    # plt.xlabel('Affected population / Población afectada (thousands/miles)')
-    # plt.ylabel('Probability / Probabilidad')
-    # plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
-    # plt.grid(True)
-    # plt.show()
-    # print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
+    save_to_JSON(DamageConsumerAreas, os.path.join(folder_prefix, output_filename))
+    #make_histogram(SampleDamageNetwork)
+
+if __name__ == '__main__':
+    main()
