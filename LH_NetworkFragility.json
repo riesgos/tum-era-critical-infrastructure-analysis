@@ -11,6 +11,24 @@
     }, {
         "D3_mean": [1.0, 1.0],
         "D3_stddev": [0.0,0.0],
+        "taxonomy": "Boundary Substation",
+        "im_min": [1.0,1.0],
+        "im_max": [12.0,12.0],
+        "imu": ["m/s","m"],
+        "imt": ["velocity","depth"],
+        "id": "unique_id"
+    }, {
+        "D3_mean": [1.0, 1.0],
+        "D3_stddev": [0.0,0.0],
+        "taxonomy": "Reducer Substation",
+        "im_min": [1.0,1.0],
+        "im_max": [12.0,12.0],
+        "imu": ["m/s","m"],
+        "imt": ["velocity","depth"],
+        "id": "unique_id"
+    }, {
+        "D3_mean": [1.0, 1.0],
+        "D3_stddev": [0.0,0.0],
         "taxonomy": "Tap",
         "im_min": [1.0,1.0],
         "im_max": [12.0,12.0],

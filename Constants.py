@@ -11,6 +11,7 @@ Created on Wed Aug 14 11:58:25 2019
 
 # useful constants for the functions
 MIN_DAMAGE=0.1 #minimum acceptable damage. Effects from smaller damage levels are neglected
+CRIT_DAMAGE=0.5 #critical damage level. A component fails if its damage level is larger or equal than this threshold
 EPS=1e-100 #epsilon constant for avoiding divisions by zero
 EDGES='edges'#keyword for edges in dictionary
 NODES='nodes'#keyword for nodes in dictionary
@@ -30,7 +31,7 @@ CAPACITY="CAP"#this property is added in code
 
 #Exposure nodes geojson file
 NODE_TYPE="taxonomy"
-NODE_NAME="Name_Node" #keyword for node name
+NODE_NAME="Name Node" #keyword for node name
 NODE_POF="ProbFailure"#this property should come in the output from damage web service
 NODE_DAMAGE='DAM'#this property is added in code 
 NODE_DELTADAMAGE='DDAM'#this property is added in code
@@ -42,6 +43,8 @@ TO="TO"
 LENGTH="length"
 LINE_TYPE="taxonomy"
 VOLTAGE='voltage'
+RESISTANCE="Resistance"
+REACTANCE="Reactance"
 WEIGHT='WEIGHT'#this property is added in code
 LINE_DAMAGE='DAM'#this property is added in code
 LINE_DELTADAMAGE='DDAM'#this property is added in code

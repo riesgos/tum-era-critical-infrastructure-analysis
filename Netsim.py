@@ -17,6 +17,7 @@ Created on Wed Aug 14 14:49:53 2019
 import numpy as np
 import networkx as nx
 import Constants as cons
+import random
 
 def direct_hazard_action(G): 
         # Evaluate Component Fragilities
@@ -40,8 +41,8 @@ def direct_hazard_action(G):
 def update_network(G,s_nodes,c_nodes):
     # first, reduce node capacities
     for node in G.nodes():
-        # if damage is close to 1 (e.g. by hazard action), set capacity to zero
-        if G.node[node][cons.NODE_DAMAGE]>1.0-cons.MIN_DAMAGE:
+        # if damage is larger than the critical damage (e.g. by hazard action), set capacity to zero
+        if G.node[node][cons.NODE_DAMAGE]>cons.CRIT_DAMAGE:
             if node in s_nodes:
                 s_nodes.remove(node)
             if node in c_nodes:
@@ -58,8 +59,13 @@ def update_network(G,s_nodes,c_nodes):
             G.node[node][cons.NODE_DELTADAMAGE]=0.0
     # now, increase edge cost and reduce their capacities
     for edge in G.edges():
-        G.edges[edge][cons.CAPACITY]-=G.edges[edge][cons.LINE_DELTADAMAGE]*G.edges[edge][cons.CAPACITY]
-        G.edges[edge][cons.WEIGHT]/=max(1-G.edges[edge][cons.LINE_DELTADAMAGE],cons.EPS)
+        # if damage is larger than the critical damage, set capacity to zero and weight arbitrarily large
+        if G.edges[edge][cons.LINE_DAMAGE]>cons.CRIT_DAMAGE:
+            G.edges[edge][cons.CAPACITY]=0.0
+            G.edges[edge][cons.WEIGHT]=1/cons.EPS
+        else:
+            G.edges[edge][cons.CAPACITY]-=G.edges[edge][cons.LINE_DELTADAMAGE]*G.edges[edge][cons.CAPACITY]
+            G.edges[edge][cons.WEIGHT]/=max(1-G.edges[edge][cons.LINE_DELTADAMAGE],cons.EPS)
         #we already applied the damage increment
         G.edges[edge][cons.LINE_DELTADAMAGE]=0.0
 
@@ -79,9 +85,10 @@ def evaluate_system_loads(G,s_nodes,c_nodes):
     #print('\t start load evaluation')
     #path_dict=nx.shortest_path(G,weight=cons.WEIGHT)
     #i_s=0
-    param_k=min(50,len(G.nodes()))
-    loads_initial=nx.betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
-    edge_loads_initial=nx.edge_betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
+    param_k=min(30,len(G.nodes()))
+    loads_initial=OD_node_betweenness_centrality(G,s_nodes,c_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
+    #edge_loads_initial=nx.edge_betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
+    edge_loads_initial=OD_edge_betweenness_centrality(G,s_nodes,c_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
     #for s_node in s_nodes:
         #print('\t source node Nr. '+str(i_s))
         #i_s=i_s+1
@@ -133,7 +140,7 @@ def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
                     #update the damage level
                     G.nodes[node][cons.NODE_DAMAGE]=1-(1/n_ratio)*n_state
                     #store the damage increment
-                    if n_state<cons.EPS:
+                    if n_state<cons.MIN_DAMAGE:
                         G.nodes[node][cons.NODE_DELTADAMAGE]=n_state
                     else:
                         G.nodes[node][cons.NODE_DELTADAMAGE]=G.nodes[node][cons.NODE_DAMAGE]-(1-n_state)
@@ -166,9 +173,12 @@ def set_state_consumers(ExposureConsumerAreas,Graph):
         key_a_name=ExposureConsumerAreas[cons.FEATURES][i][cons.PROPERTIES][cons.AREA_NAME]
         if len(Graph.edges(key_a_name))>0:
             supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]
-            areas_damage.append(np.mean(supply_edge_dam))
-        else:#it is an isolated consumer area
-            areas_damage.append(0)
+            if np.mean(supply_edge_dam)>cons.CRIT_DAMAGE:
+                areas_damage.append(1)# 1 means has a blackout
+            else:
+                areas_damage.append(0)# 0 means no blackout
+        else:#it is an isolated consumer area (no service)
+            areas_damage.append(1)
     return areas_damage
 
 # IS AN EDGE IN A PATH?
@@ -179,3 +189,167 @@ def is_edge_in_path(edge,path):
         return True
     else:
         return False
+    
+def OD_node_betweenness_centrality(G, s_nodes, c_nodes, k=None, normalized=True, weight=None,
+                                seed=None):
+    r"""Compute betweenness centrality for edges, considering paths between source and consumer nodes.
+    
+    This function is a modified version of networkx package function edge_betweenness_centrality()
+
+    Betweenness centrality of an edge $e$ is the sum of the
+    fraction of all-pairs shortest paths that pass through $e$
+
+    .. math::
+
+       c_B(e) =\sum_{s\in SV,t \in CV} \frac{\sigma(s, t|e)}{\sigma(s, t)}
+
+    where $SV$ is the set of source nodes, $CV$ is the set of consumer nodes,
+    $\sigma(s, t)$ is the number of shortest $(s, t)$-paths, and $\sigma(s, t|e)$ 
+    is the number of     those paths passing through edge $e$ [2]_.
+
+    Parameters
+    ----------
+    G : graph
+      A NetworkX graph.
+
+    k : int, optional (default=None)
+      If k is not None use k node samples to estimate betweenness.
+      The value of k <= n where n is the number of nodes in the graph.
+      Higher values give better approximation.
+    
+    s_nodes: set of source nodes
+    
+    c_nodes: set of consumer nodes
+
+    normalized : bool, optional
+      If True the betweenness values are normalized by $2/(n(n-1))$
+      for graphs, and $1/(n(n-1))$ for directed graphs where $n$
+      is the number of nodes in G.
+
+    weight : None or string, optional (default=None)
+      If None, all edge weights are considered equal.
+      Otherwise holds the name of the edge attribute used as weight.
+
+    seed : integer, random_state, or None (default)
+        Indicator of random number generation state.
+        See :ref:`Randomness<randomness>`.
+        Note that this is only used if k is not None.
+
+    Returns
+    -------
+    edges : dictionary
+       Dictionary of edges with betweenness centrality as the value.
+
+
+    For weighted graphs the edge weights must be greater than zero.
+    Zero edge weights can produce an infinite number of equal length
+    paths between pairs of nodes.
+
+    """
+    betweenness = dict.fromkeys(G.nodes, 1.0)  # b[v]=0 for v in G
+    # b[e]=0 for e in G.edges()
+    if seed is None:
+        random.seed(seed)
+    betweenness.update(dict.fromkeys(G.nodes(), 1.0))
+    if k is None:
+        sample_s_nodes = s_nodes
+        sample_c_nodes = c_nodes
+    else:
+        sample_s_nodes = random.sample(s_nodes, min(k,len(s_nodes)))
+        sample_c_nodes = random.sample(c_nodes, min(k,len(c_nodes)))
+    for s in sample_s_nodes:
+        for c in sample_c_nodes:
+            if c!=s:
+                #shortest paths
+                if weight is None:  # use BFS
+                    sp = nx.shortest_path(G, source=s,target=c)
+                else:  # use Dijkstra's algorithm
+                    sp = nx.shortest_path(G,source=s,target=c,weight=weight)
+                    # accumulation
+                for i in range(0,len(sp)):
+                    betweenness[sp[i]] +=1
+    return betweenness
+    
+    
+def OD_edge_betweenness_centrality(G, s_nodes, c_nodes, k=None, normalized=True, weight=None,
+                                seed=None):
+    r"""Compute betweenness centrality for edges, considering paths between source and consumer nodes.
+    
+    This function is a modified version of networkx package function edge_betweenness_centrality()
+
+    Betweenness centrality of an edge $e$ is the sum of the
+    fraction of all-pairs shortest paths that pass through $e$
+
+    .. math::
+
+       c_B(e) =\sum_{s\in SV,t \in CV} \frac{\sigma(s, t|e)}{\sigma(s, t)}
+
+    where $SV$ is the set of source nodes, $CV$ is the set of consumer nodes,
+    $\sigma(s, t)$ is the number of shortest $(s, t)$-paths, and $\sigma(s, t|e)$ 
+    is the number of     those paths passing through edge $e$ [2]_.
+
+    Parameters
+    ----------
+    G : graph
+      A NetworkX graph.
+
+    k : int, optional (default=None)
+      If k is not None use k node samples to estimate betweenness.
+      The value of k <= n where n is the number of nodes in the graph.
+      Higher values give better approximation.
+    
+    s_nodes: set of source nodes
+    
+    c_nodes: set of consumer nodes
+
+    normalized : bool, optional
+      If True the betweenness values are normalized by $2/(n(n-1))$
+      for graphs, and $1/(n(n-1))$ for directed graphs where $n$
+      is the number of nodes in G.
+
+    weight : None or string, optional (default=None)
+      If None, all edge weights are considered equal.
+      Otherwise holds the name of the edge attribute used as weight.
+
+    seed : integer, random_state, or None (default)
+        Indicator of random number generation state.
+        See :ref:`Randomness<randomness>`.
+        Note that this is only used if k is not None.
+
+    Returns
+    -------
+    edges : dictionary
+       Dictionary of edges with betweenness centrality as the value.
+
+
+    For weighted graphs the edge weights must be greater than zero.
+    Zero edge weights can produce an infinite number of equal length
+    paths between pairs of nodes.
+
+    """
+    betweenness = dict.fromkeys(G.edges, 1.0)  # b[v]=0 for v in G
+    # b[e]=0 for e in G.edges()
+    if seed is None:
+        random.seed(seed)
+    betweenness.update(dict.fromkeys(G.edges(), 1.0))
+    if k is None:
+        sample_s_nodes = s_nodes
+        sample_c_nodes = c_nodes
+    else:
+        sample_s_nodes = random.sample(s_nodes, min(k,len(s_nodes)))
+        sample_c_nodes = random.sample(c_nodes, min(k,len(c_nodes)))
+    for s in sample_s_nodes:
+        for c in sample_c_nodes:
+            if c!=s:
+                #shortest paths
+                if weight is None:  # use BFS
+                    sp = nx.shortest_path(G, source=s,target=c)
+                else:  # use Dijkstra's algorithm
+                    sp = nx.shortest_path(G,source=s,target=c,weight=weight)
+                # accumulation
+                for i in range(0,len(sp)-1):
+                    try:
+                        betweenness[(sp[i],sp[i+1])] +=1
+                    except:
+                        betweenness[(sp[i+1],sp[i])] +=1
+    return betweenness

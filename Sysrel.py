@@ -42,8 +42,12 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
             cons.COORDINATES:EdgesFea[i][cons.GEOMETRY][cons.COORDINATES],
             cons.VOLTAGE:1.0,
             cons.WEIGHT:1.0,
+            cons.RESISTANCE:1.0,
+            cons.REACTANCE:1.0,
             cons.LINE_DAMAGE:0.0,
-            cons.LINE_DELTADAMAGE:0.0
+            cons.LINE_DELTADAMAGE:0.0,
+            cons.LOAD:1.0,
+            cons.CAPACITY:1.0
             }) for i in range(0,len(EdgesFea))]
     G.add_edges_from(EdgeBunch)
     del EdgeBunch
@@ -59,17 +63,35 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     for attr in EdgesFea[0][cons.PROPERTIES].keys():
         EdgeAttr={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):{attr:EdgesFea[i][cons.PROPERTIES][attr]} for i in range(0,len(EdgesFea))}
         nx.set_edge_attributes(G,EdgeAttr)
-    #update the weights (weight~length/voltage)
-    EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
-        {cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])/(float(EdgesFea[i][cons.PROPERTIES][cons.VOLTAGE]))} for i in range(0,len(EdgesFea))}
+    #update the weights; depending on available data 
+    EdgeWeights={}
+    #try desired case: weightL*X, (L*sqrt(R^2+X^2), R<<X), R: resistance, X: reactance
+    try:
+        #EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
+            #{cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])*
+            # np.sqrt((float(EdgesFea[i][cons.PROPERTIES][cons.REACTANCE])**2+
+             #         float(EdgesFea[i][cons.PROPERTIES][cons.RESISTANCE])**2))} for i in range(0,len(EdgesFea))}
+        EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
+                {cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])*
+                 float(EdgesFea[i][cons.PROPERTIES][cons.REACTANCE])} for i in range(0,len(EdgesFea))}
+    except:
+        #otherwise, try just with the resistance: weight=L*R
+        try:
+            EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
+                {cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])*
+                 float(EdgesFea[i][cons.PROPERTIES][cons.RESISTANCE])} for i in range(0,len(EdgesFea))}
+        #otherwise, just assume weight~length/voltage
+        except:
+            EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
+                {cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])/(float(EdgesFea[i][cons.PROPERTIES][cons.VOLTAGE]))} for i in range(0,len(EdgesFea))}
     nx.set_edge_attributes(G,EdgeWeights)
     # create a dictionary of node lists by taxonomy
     Types=nx.get_node_attributes(G,cons.NODE_TYPE)
-    node_types={typ:[nod for nod in G.nodes() if Types[nod]==typ] for typ in node_types_keys}
+    #node_types={typ:[nod for nod in G.nodes() if Types[nod]==typ] for typ in node_types_keys}
     source=NetworkFragility[cons.META][cons.SOURCE]
     consumer=NetworkFragility[cons.META][cons.CONSUMER]
-    s_nodes=node_types[source] 
-    c_nodes=node_types[consumer]
+    s_nodes=[nod for nod in G.nodes() if Types[nod] in source]
+    c_nodes=[nod for nod in G.nodes() if Types[nod] in consumer]
     return G,s_nodes,c_nodes
 
 # evaluation of system loads
