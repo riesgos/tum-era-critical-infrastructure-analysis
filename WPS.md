@@ -16,12 +16,11 @@ Where to find all necessary elements?
 -------------------------------------
 
 To set it up yourself you can use the following docker image:
-
-https://cloud.docker.com/u/gfzriesgos/repository/docker/gfzriesgos/riesgos-wps
+https://hub.docker.com/r/gfzriesgos/riesgos-wps
 
 You also need docker image for the system reliability service:
 
-https://cloud.docker.com/u/gfzriesgos/repository/docker/gfzriesgos/system_reliability
+https://hub.docker.com/r/gfzriesgos/system_reliability
 
 The last thing you need is the json configuration file for the
 service, that is provided here:
@@ -52,7 +51,7 @@ You can find further information on how it works in the documentation
  
 Maybe it is also helpful to read the commands in the dockerfile for
 the gfz-command-line-repository, for example this one:
-https://cloud.docker.com/u/gfzriesgos/repository/registry-1.docker.io/gfzriesgos/riesgos-wps/builds/2a2b0908-0e2d-4d7b-a694-4ac6d258dc8d
+https://hub.docker.com/r/gfzriesgos/riesgos-wps/dockerfile
 
 because this clears that there is the need to pass the socket for the
 docker process to the server, so that the WPS server can run docker
