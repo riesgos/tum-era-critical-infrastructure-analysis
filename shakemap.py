@@ -11,6 +11,7 @@ import math
 import tokenize
 
 import lxml.etree as le
+from lxml.etree import XMLParser
 import numpy as np
 from scipy.spatial import cKDTree
 
@@ -71,7 +72,12 @@ class Shakemaps():
         '''
         Read the shakemap from an xml file.
         '''
-        xml = le.parse(file_name)
+        huge_parser = XMLParser(
+            encoding='utf-8',
+            recover=True,
+            huge_tree=True
+        )
+        xml = le.parse(file_name, huge_parser)
         root = xml.getroot()
 
         if Shakemaps._looks_like_tsunami_shakemap(root):
