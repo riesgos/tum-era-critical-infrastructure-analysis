@@ -1,24 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-
 Local execution test file of the content of the WPS that performs a reliability analysis on one critical infrastructure network with Monte Carlo Simulation.
-
 This service uses the probability of failure at nodes for estimating the affectation to population 
 (i.e. people affected by supply disruption).
-
 Input data: 
     -Nodal exposure and damage (probability of failure at each node)
     -Network fragility (which taxonomies are source and consumer nodes?)
     -Line exposure (how are the nodes connected?)
     -Consumer Areas exposure (how many people is supplied by which lines?)
 The input data is processed with a function that creates dicts from json files
-
 Output data:
     -Consumer Areas damage (probability of each area to have supply disruption)
     -Random sample of total affected population (raw data for performing statistics and plots)
 Created on Mon Mar 11 18:12:00 2019
 Created on Wed Aug 14 11:15:58 2019
-
 @author: hfrv2
 """
 
@@ -71,11 +66,49 @@ def make_histogram(SampleDamageNetwork):
     plt.hist(SampleDamageNetwork_1000,normed=True,stacked=True)
     plt.xlabel('Affected population / Población afectada (thousands/miles)')
     plt.ylabel('Probability / Probabilidad')
-    plt.title('Histogram of affected population / histograma de población afectada \n Scenario/Escenario VEI>=4')
+    plt.title('Histogram of affected population / histograma de población afectada')
     plt.grid(True)
     plt.show()
     print('mean (thousands): '+str(np.mean(SampleDamageNetwork_1000))+" , Coeff. of Variation: "+str(np.std(SampleDamageNetwork_1000)/np.mean(SampleDamageNetwork_1000)))
 
+def evaluate_ProbFailure_oneIntensity(fragility_file,im_file,Nodes):
+
+    intensity_provider = shakemap.Shakemaps.from_file(im_file).to_intensity_provider()
+    fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
+
+    # add the fragility value for the element in the field "ProbFailure"
+
+    for feature in Nodes['features']:
+        centroid = shapely.geometry.shape(feature['geometry']).centroid
+        lon, lat = centroid.x, centroid.y
+
+        intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
+        # there is just one damage state for each taxonomy
+        damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
+        p = damage_state.get_probability_for_intensity(intensity, units)
+        feature['properties']['ProbFailure'] = p
+
+def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes):
+    
+    #first intensity for creating the field ProbFailure in Nodes
+    evaluate_ProbFailure_oneIntensity(fragility_file_list[0],im_file_list[0],Nodes)
+    for i in range(1,len(fragility_file_list)):
+        for j in range(1,len(im_file_list)):
+            if im_file_list[j].find(fragility_file_list[i].split("_")[1])!=-1:
+                intensity_provider = shakemap.Shakemaps.from_file(im_file_list[j]).to_intensity_provider()
+                fragility_provider = fragility.Fragility.from_file(fragility_file_list[i]).to_fragility_provider()
+                # add the fragility value for the element in the field "ProbFailure"
+                for feature in Nodes['features']:
+                    centroid = shapely.geometry.shape(feature['geometry']).centroid
+                    lon, lat = centroid.x, centroid.y
+                    intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
+                    # there is just one damage state for each taxonomy
+                    damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
+                    p = damage_state.get_probability_for_intensity(intensity, units)
+                    feature['properties']['ProbFailure'] *= p
+                break
+
+    
 def main():
     ##### ----------------------------- location of input files----------------------------------------########
 
@@ -98,7 +131,7 @@ def main():
 
     prefixes_by_hazard = {
         'earthquake': 'EQ',
-        'lahar': 'LH'
+        'lahar': ['LH_maxheight','LH_maxvelocity']
     }
     
     prefixes_by_country = {
@@ -115,33 +148,28 @@ def main():
         raise Exception('{0} is not a supported hazard'.format(args.hazard))
 
     fragility_file_prefix = prefixes_by_hazard[args.hazard]
+    im_file_list=args.intensity_file
         
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
-    # Exposure data from Ecuador
+    # Exposure data 
     DamageNodes=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureNodes.geojson'))
     ExposureLines=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureLines.geojson'))
     ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas.geojson'))
 
-    fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
-    NetworkFragility=import_json_to_dict(fragility_file)
-
-    intensity_provider = shakemap.Shakemaps.from_file(args.intensity_file).to_intensity_provider()
-    fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
-
-    # add the fragility value for the element in the field "ProbFailure"
-
-    for feature in DamageNodes['features']:
-        centroid = shapely.geometry.shape(feature['geometry']).centroid
-        lon, lat = centroid.x, centroid.y
-
-        intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
-        # there is just one damage state for each taxonomy
-        damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
-        p = damage_state.get_probability_for_intensity(intensity, units)
-        feature['properties']['ProbFailure'] = p
-
+    # if the hazard uses more than one intensity measure
+    if args.hazard in ['lahar']:
+        fragility_files = [os.path.join(folder_prefix, ffp + '_NetworkFragility.json') for ffp in fragility_file_prefix]
+        evaluate_ProbFailure_multiIntensity(fragility_files,im_file_list,DamageNodes)
+        NetworkFragility=import_json_to_dict(fragility_files[0])# sources and terminals do not depend on the intensity measure
+    else: #hazard with one single intensity measure
+        fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
+        evaluate_ProbFailure_oneIntensity(fragility_file,im_file_list,DamageNodes)
+        NetworkFragility=import_json_to_dict(fragility_file)
     
+    
+    
+
     # execute main function
     DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
 
