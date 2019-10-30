@@ -131,7 +131,7 @@ def main():
 
     prefixes_by_hazard = {
         'earthquake': 'EQ',
-        'lahar': ['LH_maxheight','LH_maxvelocity']
+        'lahar': ['LH_max-flow-height','LH_max-flow-velocity']
     }
     
     prefixes_by_country = {
