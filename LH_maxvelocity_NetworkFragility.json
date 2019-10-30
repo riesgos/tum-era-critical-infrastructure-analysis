@@ -1,0 +1,72 @@
+{
+    "data": [{
+        "D3_mean": 1.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Substation",
+        "im_min": 0.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 1.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Boundary Substation",
+        "im_min": 0.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 1.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Reducer Substation",
+        "im_min": 0.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 1.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Tap",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 12.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Consumer",
+        "im_min": 0.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 1.0,
+        "D3_stddev": 0.0,
+        "taxonomy": "Power Plant",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m/s",
+        "imt": "Max flow velocity",
+        "id": "unique_id"
+    }],
+    "meta": {
+        "shape": "logncdf",
+        "lossCategory": "structural",
+        "taxonomies": ["Substation","Boundary Substation", "Reducer Substation","Tap", "Consumer", "Power Plant"],
+        "no_damage": "D0",
+        "assetCategory": "power network",
+        "source": "Power Plant",
+        "consumer": "Consumer",
+        "format": "continuous",
+        "description": "Lahar Fragility Model, project RIESGOS",
+        "id": "Wilson-Zuccaro_v1.0",
+        "damage_states": "Wilson-Zuccaro",
+        "limit_states": ["D3"],
+        "taxonomy_source": "Wilson et. al. (2014) and Zuccaro & De Gregorio (2013)"
+    }
+}
