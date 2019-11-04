@@ -42,21 +42,21 @@ def update_network(G,s_nodes,c_nodes):
     # first, reduce node capacities
     for node in G.nodes():
         # if damage is larger than the critical damage (e.g. by hazard action), set capacity to zero
-        if G.node[node][cons.NODE_DAMAGE]>cons.CRIT_DAMAGE:
+        if G.nodes[node][cons.NODE_DAMAGE]>cons.CRIT_DAMAGE:
             if node in s_nodes:
                 s_nodes.remove(node)
             if node in c_nodes:
                 c_nodes.remove(node)
-            G.node[node][cons.CAPACITY]=0.0
+            G.nodes[node][cons.CAPACITY]=0.0
             # damaged node also makes its edges unavailable
             for edge in G.edges(node):
                G.edges[edge][cons.WEIGHT]=1/cons.EPS 
                 
         #otherwise, only reduce capacity
         else:
-            G.node[node][cons.CAPACITY]-=G.node[node][cons.NODE_DELTADAMAGE]*G.node[node][cons.CAPACITY]
+            G.nodes[node][cons.CAPACITY]-=G.nodes[node][cons.NODE_DELTADAMAGE]*G.nodes[node][cons.CAPACITY]
             #we already applied the damage increment
-            G.node[node][cons.NODE_DELTADAMAGE]=0.0
+            G.nodes[node][cons.NODE_DELTADAMAGE]=0.0
     # now, increase edge cost and reduce their capacities
     for edge in G.edges():
         # if damage is larger than the critical damage, set capacity to zero and weight arbitrarily large

@@ -101,7 +101,7 @@ def evaluate_system_loads(G,s_nodes,c_nodes):
 
 #Assign component capacities
 def assign_initial_capacities(G,alpha):
-    node_caps={no:{cons.CAPACITY:alpha*G.node[no][cons.LOAD]} for no in G.nodes()}
+    node_caps={no:{cons.CAPACITY:alpha*G.nodes[no][cons.LOAD]} for no in G.nodes()}
     edge_caps={ed:{cons.CAPACITY:alpha*G.edges[ed][cons.LOAD]} for ed in G.edges()}
     nx.set_node_attributes(G,node_caps)
     nx.set_edge_attributes(G,edge_caps)
