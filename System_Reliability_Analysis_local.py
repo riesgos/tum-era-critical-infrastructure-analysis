@@ -88,15 +88,16 @@ def evaluate_ProbFailure_oneIntensity(fragility_file,im_file,Nodes):
         p = damage_state.get_probability_for_intensity(intensity, units)
         feature['properties']['ProbFailure'] = p
 
-def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes):
+def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes,splitter):
     
     #first intensity for creating the field ProbFailure in Nodes
     evaluate_ProbFailure_oneIntensity(fragility_file_list[0],im_file_list[0],Nodes)
     for i in range(1,len(fragility_file_list)):
-        for j in range(1,len(im_file_list)):
-            if im_file_list[j].find(fragility_file_list[i].split("_")[1])!=-1:
+        for j in range(0,len(im_file_list)):
+            if im_file_list[j].find(fragility_file_list[i].split(splitter)[1])!=-1:
                 intensity_provider = shakemap.Shakemaps.from_file(im_file_list[j]).to_intensity_provider()
                 fragility_provider = fragility.Fragility.from_file(fragility_file_list[i]).to_fragility_provider()
+                print("Matched frag and haz")
                 # add the fragility value for the element in the field "ProbFailure"
                 for feature in Nodes['features']:
                     centroid = shapely.geometry.shape(feature['geometry']).centroid
@@ -115,7 +116,7 @@ def main():
     argparser = argparse.ArgumentParser(
         description='Script to compute the probability of disruption given a shakemap')
     argparser.add_argument(
-        '--intensity_file',
+        '--intensity_file', nargs='*',
         help='File with the hazard intensities, for example a shakemap')
     argparser.add_argument(
         '--country',
@@ -131,7 +132,7 @@ def main():
 
     prefixes_by_hazard = {
         'earthquake': 'EQ',
-        'lahar': ['LH_max-flow-height','LH_max-flow-velocity']
+        'lahar': ['LH_maxheight','LH_maxvelocity']
     }
     
     prefixes_by_country = {
@@ -160,7 +161,7 @@ def main():
     # if the hazard uses more than one intensity measure
     if args.hazard in ['lahar']:
         fragility_files = [os.path.join(folder_prefix, ffp + '_NetworkFragility.json') for ffp in fragility_file_prefix]
-        evaluate_ProbFailure_multiIntensity(fragility_files,im_file_list,DamageNodes)
+        evaluate_ProbFailure_multiIntensity(fragility_files,im_file_list,DamageNodes,'LH_')
         NetworkFragility=import_json_to_dict(fragility_files[0])# sources and terminals do not depend on the intensity measure
     else: #hazard with one single intensity measure
         fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
