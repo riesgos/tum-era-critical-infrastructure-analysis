@@ -1,7 +1,6 @@
 {
 "type": "FeatureCollection",
 "name": "C1_EPN_ExposureNodes",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
 { "type": "Feature", "properties": { "FID": 0, "Name Node": "S\/E NUEVA VENTANAS", "taxonomy": "Power Plant" }, "geometry": { "type": "Point", "coordinates": [ -71.482346756205899, -32.74918499402731 ] } },
 { "type": "Feature", "properties": { "FID": 1, "Name Node": "S\/E VENTANAS", "taxonomy": "Power Plant" }, "geometry": { "type": "Point", "coordinates": [ -71.480957081799644, -32.74950400046761 ] } },
