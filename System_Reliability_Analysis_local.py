@@ -88,26 +88,24 @@ def evaluate_ProbFailure_oneIntensity(fragility_file,im_file,Nodes):
         p = damage_state.get_probability_for_intensity(intensity, units)
         feature['properties']['ProbFailure'] = p
 
-def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes,splitter):
+def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes):
     
-    #first intensity for creating the field ProbFailure in Nodes
+    #first intensity (lahars, height) for creating the field ProbFailure in Nodes
     evaluate_ProbFailure_oneIntensity(fragility_file_list[0],im_file_list[0],Nodes)
+    # we assume that the fragility and intensity lists have the same order ( for lahars, second intensity and fragility is velocity)
     for i in range(1,len(fragility_file_list)):
-        for j in range(0,len(im_file_list)):
-            if im_file_list[j].find(fragility_file_list[i].split(splitter)[1])!=-1:
-                intensity_provider = shakemap.Shakemaps.from_file(im_file_list[j]).to_intensity_provider()
-                fragility_provider = fragility.Fragility.from_file(fragility_file_list[i]).to_fragility_provider()
-                print("Matched frag and haz")
-                # add the fragility value for the element in the field "ProbFailure"
-                for feature in Nodes['features']:
-                    centroid = shapely.geometry.shape(feature['geometry']).centroid
-                    lon, lat = centroid.x, centroid.y
-                    intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
-                    # there is just one damage state for each taxonomy
-                    damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
-                    p = damage_state.get_probability_for_intensity(intensity, units)
-                    feature['properties']['ProbFailure'] *= p
-                break
+        intensity_provider = shakemap.Shakemaps.from_file(im_file_list[i]).to_intensity_provider()
+        fragility_provider = fragility.Fragility.from_file(fragility_file_list[i]).to_fragility_provider()
+        #print("Matched frag and haz")
+        # add the fragility value for the element in the field "ProbFailure"
+        for feature in Nodes['features']:
+            centroid = shapely.geometry.shape(feature['geometry']).centroid
+            lon, lat = centroid.x, centroid.y
+            intensity, units = intensity_provider.get_nearest(lon=lon, lat=lat)
+            # there is just one damage state for each taxonomy
+            damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
+            p = damage_state.get_probability_for_intensity(intensity, units)
+            feature['properties']['ProbFailure'] *= p
 
     
 def main():
@@ -161,7 +159,7 @@ def main():
     # if the hazard uses more than one intensity measure
     if args.hazard in ['lahar']:
         fragility_files = [os.path.join(folder_prefix, ffp + '_NetworkFragility.json') for ffp in fragility_file_prefix]
-        evaluate_ProbFailure_multiIntensity(fragility_files,im_file_list,DamageNodes,'LH_')
+        evaluate_ProbFailure_multiIntensity(fragility_files,im_file_list,DamageNodes)
         NetworkFragility=import_json_to_dict(fragility_files[0])# sources and terminals do not depend on the intensity measure
     else: #hazard with one single intensity measure
         fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
