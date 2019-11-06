@@ -163,7 +163,7 @@ def main():
         NetworkFragility=import_json_to_dict(fragility_files[0])# sources and terminals do not depend on the intensity measure
     else: #hazard with one single intensity measure
         fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
-        evaluate_ProbFailure_oneIntensity(fragility_file,im_file_list,DamageNodes)
+        evaluate_ProbFailure_oneIntensity(fragility_file,im_file_list[0],DamageNodes)
         NetworkFragility=import_json_to_dict(fragility_file)
     
     
