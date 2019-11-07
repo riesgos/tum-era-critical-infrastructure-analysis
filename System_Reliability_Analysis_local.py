@@ -105,7 +105,9 @@ def evaluate_ProbFailure_multiIntensity(fragility_file_list,im_file_list,Nodes):
             # there is just one damage state for each taxonomy
             damage_state = fragility_provider.get_damage_states_for_taxonomy(feature['properties']['taxonomy'])[0]
             p = damage_state.get_probability_for_intensity(intensity, units)
-            feature['properties']['ProbFailure'] *= p
+            q = feature['properties']['ProbFailure']
+            #print(feature['properties']['Name Node']+": ("+str(lon)+", "+str(lat)+"), "+" "+str(intensity)+" "+str(q)+" "+str(p))
+            feature['properties']['ProbFailure'] =max(p,q)
 
     
 def main():
@@ -163,7 +165,7 @@ def main():
         NetworkFragility=import_json_to_dict(fragility_files[0])# sources and terminals do not depend on the intensity measure
     else: #hazard with one single intensity measure
         fragility_file = os.path.join(folder_prefix, fragility_file_prefix + '_NetworkFragility.json')
-        evaluate_ProbFailure_oneIntensity(fragility_file,im_file_list[0],DamageNodes)
+        evaluate_ProbFailure_oneIntensity(fragility_file,im_file_list,DamageNodes)
         NetworkFragility=import_json_to_dict(fragility_file)
     
     
