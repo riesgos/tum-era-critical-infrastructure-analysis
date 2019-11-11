@@ -51,6 +51,8 @@ def update_network(G,s_nodes,c_nodes):
             # damaged node also makes its edges unavailable
             for edge in G.edges(node):
                G.edges[edge][cons.WEIGHT]=1/cons.EPS 
+               G.edges[edge][cons.CAPACITY]=0
+               G.edges[edge][cons.LINE_DAMAGE]=1
                 
         #otherwise, only reduce capacity
         else:
@@ -172,7 +174,7 @@ def set_state_consumers(ExposureConsumerAreas,Graph):
     for i in range(0,len(ExposureConsumerAreas[cons.FEATURES])):
         key_a_name=ExposureConsumerAreas[cons.FEATURES][i][cons.PROPERTIES][cons.AREA_NAME]
         if len(Graph.edges(key_a_name))>0:
-            supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]
+            supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]           
             if np.mean(supply_edge_dam)>cons.CRIT_DAMAGE:
                 areas_damage.append(1)# 1 means has a blackout
             else:
