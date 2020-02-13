@@ -137,7 +137,8 @@ def main():
     
     prefixes_by_country = {
         'chile': 'C1',
-        'ecuador': 'E1',
+        'ecuador': 'E1',       
+        'peru':'P1',
     }
 
     if args.country not in prefixes_by_country.keys():
