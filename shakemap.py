@@ -125,7 +125,7 @@ class EqShakemap():
 
         lon_spacing, lat_spacing = self._find_lon_lat_spacing()
 
-        max_dist = 2.1 * math.sqrt(lon_spacing**2 + lat_spacing**2)
+        max_dist = 55.61 * math.sqrt(lon_spacing**2 + lat_spacing**2)
 
         return ShakemapIntensityProvider(
             grid_fields, grid_data, 'LON', 'LAT', max_dist)
