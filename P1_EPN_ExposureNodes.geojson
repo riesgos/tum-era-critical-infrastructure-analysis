@@ -1,7 +1,6 @@
 {
 "type": "FeatureCollection",
 "name": "P1_EPN_ExposureNodes",
-"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
 "features": [
 { "type": "Feature", "properties": { "OBJECTID": 23, "Name Node": "CARAPONGO500", "taxonomy": "Substation", "CODIGO": "0", "DEMANDA": 0, "DEMANDA_AP": 0, "INSTALADA": 0, "ProbFailure": 0.86260567033906066, "FID": "B121", "Pc": 0 }, "geometry": { "type": "Point", "coordinates": [ -76.86267, -11.98589 ] } },
 { "type": "Feature", "properties": { "OBJECTID": 24, "Name Node": "CARABAYLLO500", "taxonomy": "Boundary Substation", "CODIGO": "30514051", "DEMANDA": 18750.0, "DEMANDA_AP": 3750.0, "INSTALADA": 25000.0, "ProbFailure": 0.25867488631855218, "FID": "B119", "Pc": 0 }, "geometry": { "type": "Point", "coordinates": [ -76.96498878399926, -11.800584345999903 ] } },
