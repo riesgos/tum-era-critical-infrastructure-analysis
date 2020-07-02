@@ -19,6 +19,7 @@ import networkx as nx
 import copy
 import Constants as cons
 import Netsim as ns
+import Physnet as phn
 ##### ----------------------------- Functions called in the main file ---------------------------------########
 
 # Create the graph from geojson files
@@ -95,9 +96,14 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     return G,s_nodes,c_nodes
 
 # evaluation of system loads
-# load is computed as the number of shortest paths that pass through the component (node or edge)
-def evaluate_system_loads(G,s_nodes,c_nodes):
-    ns.evaluate_system_loads(G,s_nodes,c_nodes)
+# if load method is generic, load is computed as the number of shortest paths that pass through the component (node or edge)
+# if load method is physical, load is computed with DC power flow analysis (for power networks)
+def evaluate_system_loads(G,s_nodes,c_nodes,load_method):
+    if load_method == 'generic':
+        ns.evaluate_system_loads(G,s_nodes,c_nodes)
+    if load_method == 'physical':
+        phn.evaluate_system_loads(G)
+    
 
 #Assign component capacities
 def assign_initial_capacities(G,alpha):

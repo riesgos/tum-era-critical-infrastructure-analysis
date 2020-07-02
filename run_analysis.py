@@ -20,7 +20,7 @@ Created on Wed Aug 14 11:15:58 2019
 import argparse
 import json
 import os
-
+import sys
 import shapely.geometry
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,11 +29,11 @@ import shakemap
 import fragility
 import Sysrel as sr
 
-def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas):
+def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas, load_method):
     ##### ----------------------------- Load network data -------------------------------########
     Graph,source_nodes,consumer_nodes=sr.load_network_data(DamageNodes,ExposureLines,NetworkFragility)
     ##### --------------------- Assess unperturbed system and capacities ----------------########
-    sr.evaluate_system_loads(Graph,source_nodes,consumer_nodes)
+    sr.evaluate_system_loads(Graph,source_nodes,consumer_nodes,load_method)
     alpha=1.5#safety factor (>=1.0) for estimating capacity based on initial loads 
     sr.assign_initial_capacities(Graph,alpha)
     ##### ----------------------------- Monte Carlo Simulation --------------------------########
@@ -75,7 +75,7 @@ def evaluate_ProbFailure_oneIntensity(fragility_file,im_file,Nodes):
 
     intensity_provider = shakemap.Shakemaps.from_file(im_file).to_intensity_provider()
     fragility_provider = fragility.Fragility.from_file(fragility_file).to_fragility_provider()
-
+    print(sys.getsizeof(intensity_provider))
     # add the fragility value for the element in the field "ProbFailure"
 
     for feature in Nodes['features']:
@@ -125,8 +125,12 @@ def main():
         '--hazard',
         help='Hazard for chosing the fragility functions. Supported: earthquake, lahar')
     argparser.add_argument(
+        '--load_assignment',
+        help='Method for calculating loads. Either generic (faster computation) or physical (more precise)')
+    argparser.add_argument(
         '--output_file',
         help='Name of the output file for the consumer areas with damage.')
+    
 
     args = argparser.parse_args()
 
@@ -140,6 +144,11 @@ def main():
         'ecuador': 'E1',       
         'peru':'P1',
     }
+    
+    prefixes_by_method = {
+        'generic': 'GEN',
+        'physics': 'PHY',
+    }
 
     if args.country not in prefixes_by_country.keys():
         raise Exception('{0} is not a supported country'.format(args.country))
@@ -148,9 +157,13 @@ def main():
 
     if args.hazard not in prefixes_by_hazard.keys():
         raise Exception('{0} is not a supported hazard'.format(args.hazard))
+        
+    if args.load_assignment not in prefixes_by_method.keys():
+        raise Exception('{0} is not a supported load assignment method'.format(args.load_assignment))
 
     fragility_file_prefix = prefixes_by_hazard[args.hazard]
     im_file_list=args.intensity_file
+    load_method=args.load_assignment
         
     #folder location
     folder_prefix = os.path.dirname(os.path.realpath(__file__))
@@ -158,7 +171,9 @@ def main():
     DamageNodes=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureNodes.geojson'))
     ExposureLines=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureLines.geojson'))
     ExposureConsumerAreas=import_json_to_dict(os.path.join(folder_prefix, country_prefix + '_EPN_ExposureConsumerAreas.geojson'))
-
+    # print(sys.getsizeof(DamageNodes))
+    # print(sys.getsizeof(ExposureLines))
+    # print(sys.getsizeof(ExposureConsumerAreas))
     # if the hazard uses more than one intensity measure
     if args.hazard in ['lahar']:
         fragility_files = [os.path.join(folder_prefix, ffp + '_NetworkFragility.json') for ffp in fragility_file_prefix]
@@ -178,7 +193,7 @@ def main():
     
 
     # execute main function
-    DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas)
+    DamageConsumerAreas,SampleDamageNetwork = run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, ExposureConsumerAreas,load_method)
 
     if args.output_file is None:
         output_filename = country_prefix + '_EPN_ExposureConsumerAreas_withDamage.geojson'
