@@ -25,42 +25,41 @@ import geopandas as gpd
 import pycrs
 import numpy
 from shapely.geometry import Point, LineString, Polygon
+import pypsa
 
 def read_files():
-    busesfp = 'red_chile/buses.csv'
+   busesfp = 'red_chile/buses.csv'
     busesexposurefp = 'red_chile/buses_elec_exposure.csv'
     allnodesfp = 'red_chile/all_nodes.csv'
-
     linesexposurefp = 'red_chile/C1_EPN_ExposureLines_modified.shp'
     linesfp = 'red_chile/lines.csv'
-
     powerplantsconsumersfp = 'red_chile/power_plants_consumers.csv'
-
     loadsfp = 'red_chile/loads.csv'
-
     transformersfp = 'red_chile/transformers.csv'
-
-    folderfp = 'network'
-    networkfp = 'network/network_valparaiso'
-
-    if not os.path.exists(folderfp):
-        os.mkdir(folderfp)
 
     buses = pd.read_csv(busesfp)
     busesexposure = pd.read_csv(busesexposurefp)
     allnodes = pd.read_csv(allnodesfp)
-
     lines = pd.read_csv(linesfp)
-
     linesexposure = gpd.read_file(linesexposurefp)
-
     powerplantsconsumers = pd.read_csv(powerplantsconsumersfp)
-
     loads = pd.read_csv(loadsfp)
     transformers = pd.read_csv(transformersfp)
-
+    
     #print(allnodes)
     
+    folderfp = 'network'
+    networkfp = 'network/network_valparaiso' # path to save output shape and GeoJSON files
+    
+    if not os.path.exists(folderfp):
+        os.mkdir(folderfp)
+    
+    pypsafp = 'Data Pypsa' # path to save input data for Pypsa
+    if not os.path.exists(pypsafp):
+        os.mkdir(pypsafp)
+        
+    historicalfp = 'historical_data_chile' # path to databases of load and generation
+        
 def build_buses():
     # Creates file for the buses including buses of electrical analysis, power plants and consumers of exposure file and loads GEOJson and shape formats and creates indiviual shape files
     # Code to convert DataFrame to GeodataFrame adapted from https://www.kaggle.com/learn-forum/111860
@@ -305,11 +304,51 @@ def build_lines():
     all_lines.to_file(networkfp + '_all_lines.shp')
     all_lines.to_file(networkfp + '_all_lines.geojson', driver='GeoJSON')
     
+def pypsa_network_files():
+    # Generate network csv files for Pyspsa from exposure file including buses, generators, lines, loads and transformers
+    
+    # buses
+    busesp = all_buses_gdf.loc[(all_buses_gdf['taxonomy'] == 'Boundary Substation') | (all_buses_gdf['taxonomy'] == 'Substation') | (all_buses_gdf['taxonomy'] =='Boundary Tap') | (all_buses_gdf['taxonomy'] == 'Tap')]
+    busesp[['name', 'v_nom']].to_csv(pypsafp + '/buses.csv', index = False)
+
+    # generators
+    generatorsp = all_buses_gdf.loc[(all_buses_gdf['taxonomy'] == 'Power Plant') | (all_buses_gdf['taxonomy'] == 'Power Plant Equivalent')]
+    generatorsp[['name', 'bus', 'p_nom', 'carrier']].to_csv(pypsafp + '/generators.csv', index=False)
+
+    # lines
+    linesp = all_lines.loc[all_lines['taxonomy'] == 'Transmission'].reset_index(drop=True)
+    # Drop S/E GNL QUINTERO - S/E CENTRAL QUINTERO FID 69 because it was not considered in the electrical analysis
+    linesp.drop(linesp.loc[linesp['FID'] == 69].index[0], axis=0 , inplace=True)
+
+    # loads
+    loadsp = all_buses_gdf.loc[all_buses_gdf['taxonomy'] == 'Load']
+    loadsp[['name', 'bus']].to_csv(pypsafp + '/loads.csv', index = False)
+
+    # transformers
+    transformersp = all_lines.loc[all_lines['taxonomy'] == 'Transformer']
+    transformersp[['name', 'bus0', 'bus1', 's_nom', 'x']].to_csv(pypsafp + '/transformers.csv', index=False)
+    
+def time_stamps():
+    # generates csv file with timestamps for power flow analysis
+    day='2017-12-28'
+
+    # Generate time snapshots for analysis in Pypsa
+    snapshots=pd.DataFrame(columns=['name', 'weightings'])
+    dates = pd.date_range(start=day, periods = 24, freq='H').strftime('%d/%m/%Y %H:%M')
+    #print(dates)
+
+    snapshots['name'] = dates
+    snapshots['weightings'] = 1
+    snapshots.to_csv(pypsafp +'/snapshots.csv', index=False)    
+
+    
 def evaluate_system_loads(G):
     read_files()
     build_buses()
     straight_lines()
     build_lines()
+    pypsa_network_files()
+    time_stamps()
     return G
 
 
