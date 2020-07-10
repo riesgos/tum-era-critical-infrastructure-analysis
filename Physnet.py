@@ -26,6 +26,7 @@ import pycrs
 import numpy
 from shapely.geometry import Point, LineString, Polygon
 import pypsa
+from datetime import datetime, timedelta
 
 def read_files():
    busesfp = 'red_chile/buses.csv'
@@ -54,11 +55,12 @@ def read_files():
     if not os.path.exists(folderfp):
         os.mkdir(folderfp)
     
-    pypsafp = 'Data Pypsa' # path to save input data for Pypsa
+    pypsafp = 'valparaiso-with-load-gen-trafos' # path to save input data for Pypsa
     if not os.path.exists(pypsafp):
         os.mkdir(pypsafp)
         
     historicalfp = 'historical_data_chile' # path to databases of load and generation
+    historicalgen = pd.read_csv(historicalfp + '/SIC_DIC.csv') # historical generation database
         
 def build_buses():
     # Creates file for the buses including buses of electrical analysis, power plants and consumers of exposure file and loads GEOJson and shape formats and creates indiviual shape files
@@ -189,6 +191,8 @@ def build_lines():
     # include lines considered in the electrical analysis, the distribution lines of exposure file, additional lines, the lines corresponding to transformers and the conection between generators and substations and Generate a GeoJSON file
     # Generate lines with real path from exposure file with numbers of the "bus0" and "bus1" columns of electrical analysis
     linesexposure_gdf = gpd.GeoDataFrame(columns=numpy.append(linesexposure.columns.values, lines.columns.values))
+    pp_consumers = gpd.read_file(networkfp + '_pp_consumers.shp')
+    buses_gdf = gpd.read_file(networkfp + '_buses.shp')
     for index, row in lines.iterrows():
         #print('row', row.values)
         p0 = row['bus0']
@@ -259,20 +263,20 @@ def build_lines():
     generators_lines_gdf = gpd.GeoDataFrame(columns = ['FID', 'FROM', 'TO', 'taxonomy', 'FROM_ID', 'TO_ID', 'Reactance', 'name', 'Nombre', 'geometry'])
     for index, row in pp_consumers.iterrows():
         if((row['taxonomy'] == "Power Plant") or (row['taxonomy'] == "Power Plant Equivalent")):
-            indexbus1 = buses_gdf.loc[buses_gdf['name'] == row['bus']].index[0]
+            indexbus1 = buses_gdf.loc[buses_gdf['name'] == row['bus']].index[0]            
             bus1 = buses_gdf['geometry'][indexbus1]
             bus0 = row.geometry
 
             line = LineString([bus0, bus1])
-            generators_lines_gdf.loc[len(generators_lines_gdf)] = [row['FID'], row['Name Node'], buses['Name Node'][indexbus1], 'generation', row['FID'], buses['FID'][indexbus1], row['Synchronous Reactance Xd - Ohms'], row['name'], row['Name Node'], line]
-    #print(generators_lines_gdf)
+            generators_lines_gdf.loc[len(generators_lines_gdf)] = [row['FID'], row['Name Node'], buses['Name Node'][indexbus1], 'generation', row['FID'], buses['FID'][indexbus1], row['Synchronou'], row['name'], row['Name Node'], line]
+    
     # Delete lines of generators which are already included in the exposure file
-    print('index', generators_lines_gdf.loc[generators_lines_gdf['FID'] == 267].index[0])
-    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == 267].index[0], axis=0, inplace=True)
-    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == 268].index[0], axis=0, inplace=True)
-    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == 269].index[0], axis=0, inplace=True)
-    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == 270].index[0], axis=0, inplace=True)
-    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == 271].index[0], axis=0, inplace=True)
+    #print('index', generators_lines_gdf.loc[generators_lines_gdf['FID'] == '267'].index[0])
+    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == '267'].index[0], axis=0, inplace=True)
+    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == '268'].index[0], axis=0, inplace=True)
+    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == '269'].index[0], axis=0, inplace=True)
+    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == '270'].index[0], axis=0, inplace=True)
+    generators_lines_gdf.drop(generators_lines_gdf.loc[generators_lines_gdf['FID'] == '271'].index[0], axis=0, inplace=True)
 
     # crs definition lines considered in the electrical analysis
     linesexposure_gdf.crs = "EPSG:4326"
@@ -286,13 +290,13 @@ def build_lines():
 
     # crs definition transformers
     transformers_gdf.crs = "EPSG:4326"
-    print(transformers_gdf.crs) 
+    #print(transformers_gdf.crs) 
     # Write the data into the Shapefile
     transformers_gdf.to_file(networkfp + '_transformers.shp')
 
     # crs definition lines generators
     generators_lines_gdf.crs = "EPSG:4326"
-    print(generators_lines_gdf.crs) 
+    #print(generators_lines_gdf.crs) 
     # Write the data into the Shapefile
     generators_lines_gdf.to_file(networkfp + '_lines_generators.shp')
 
@@ -328,10 +332,8 @@ def pypsa_network_files():
     transformersp = all_lines.loc[all_lines['taxonomy'] == 'Transformer']
     transformersp[['name', 'bus0', 'bus1', 's_nom', 'x']].to_csv(pypsafp + '/transformers.csv', index=False)
     
-def time_stamps():
+def time_stamps(day):
     # generates csv file with timestamps for power flow analysis
-    day='2017-12-28'
-
     # Generate time snapshots for analysis in Pypsa
     snapshots=pd.DataFrame(columns=['name', 'weightings'])
     dates = pd.date_range(start=day, periods = 24, freq='H').strftime('%d/%m/%Y %H:%M')
@@ -339,8 +341,54 @@ def time_stamps():
 
     snapshots['name'] = dates
     snapshots['weightings'] = 1
-    snapshots.to_csv(pypsafp +'/snapshots.csv', index=False)    
+    snapshots.to_csv(pypsafp +'/snapshots.csv', index=False)
+    return dates 
 
+def parser(date_string):
+    # Function to read of a specific format from a csv or excel file
+    return datetime.strptime(date_string, "%Y %m %d").strftime("%Y %m %d %H:%M" )
+
+def gen_time_series():
+    # Generate file 'generators-p_set.csv' with the generation in time for each power plant
+    # Read excel file with data of hourly generation of power plants for every month
+    data_generation = pd.read_excel(data_generationfp, sep='\s+', parse_dates={'datetime': [1, 2, 3]}, index_col='datetime', date_parser=parser)
+    data_generation['Hour Corrected'] = data_generation['Hour']-1
+
+    data_generation.index += pd.TimedeltaIndex(data_generation['Hour Corrected'], unit='h')
+    #print(data_generation.loc['2017-12-01'])
+    #print(data_generation.dtypes)
+    
+    pp_consumers = gpd.read_file(networkfp + '_pp_consumers.shp')
+    generators = pp_consumers.loc[(pp_consumers['taxonomy'] == 'Power Plant') | (pp_consumers['taxonomy'] == 'Power Plant Equivalent')]
+    generation = pd.DataFrame(columns=numpy.append('name', generators['name']))
+    generation['name'] = dates
+    # list with the hours in a day from 1 to 24
+    hours = list(range(1,25))
+    for index, row in generators.iterrows():
+    #    print(row['Assumption'])
+        if(row['Assumption'] == 0): # Generation taken from the database of gross generation of the power plants
+            #print(row['Plant Name'])
+            generation[row['name']] = data_generation.loc[data_generation['Central'] == row['Plant Name']].loc[day, 'Generacion_MWh'].values
+        if(row['Assumption'] == 1): # Generation calculated as a percentage of generation capacity given by 'p_factor'
+            generation[row['name']] = row['p_nom']*row['p_factor']
+            #print(row['name'])
+        if(row['Assumption'] == 2): # Generation calculated as a percentage of generation capacity given by 'p_factor'. Corresponds to equivalent line with no power measurement available
+            generation[row['name']] = row['p_nom']*row['p_factor']
+        if(row['Assumption'] == 3): # Generation taken from the power measuremt in line. Corresponds to an equivalent line
+            # Select the measurement in the line and choose active power, field corresponding to 'Transferencia por líneas en MW'
+            p_measurement = data_lines.loc[(data_lines['Barra i'] == row['Barra i']) & (data_lines['Barra j'] == row['Barra j'])].iloc[0]
+            #print(row['Barra i'],row['Barra j'])
+            #print(p_measurement)
+            #p_measurementac = p_measurement.iloc[0]
+            p_measurementdf = pd.DataFrame(p_measurement) 
+            generation[row['name']] = p_measurementdf.loc[hours].values * row['p_factor']
+        if(row['Assumption'] == 4): # Solar power plant with no data: 85% of capacity during day and 0 during night
+            generation.loc[0:5, row['name']] = 0
+            generation.loc[6:18, row['name']] = row['p_nom']*row['p_factor']
+            generation.loc[19:24, row['name']] = 0    
+    # Save file
+    generation.to_csv(pypsafp +'/generators-p_set.csv', index=False)
+    #print(generation)
     
 def evaluate_system_loads(G):
     read_files()
@@ -348,7 +396,9 @@ def evaluate_system_loads(G):
     straight_lines()
     build_lines()
     pypsa_network_files()
-    time_stamps()
+    day='2017-12-28'
+    dates=time_stamps(day)    
+    gen_time_series()
     return G
 
 
