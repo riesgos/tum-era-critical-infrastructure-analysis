@@ -28,39 +28,48 @@ from shapely.geometry import Point, LineString, Polygon
 import pypsa
 from datetime import datetime, timedelta
 
-def read_files():
-   busesfp = 'red_chile/buses.csv'
-    busesexposurefp = 'red_chile/buses_elec_exposure.csv'
-    allnodesfp = 'red_chile/all_nodes.csv'
-    linesexposurefp = 'red_chile/C1_EPN_ExposureLines_modified.shp'
-    linesfp = 'red_chile/lines.csv'
-    powerplantsconsumersfp = 'red_chile/power_plants_consumers.csv'
-    loadsfp = 'red_chile/loads.csv'
-    transformersfp = 'red_chile/transformers.csv'
 
-    buses = pd.read_csv(busesfp)
-    busesexposure = pd.read_csv(busesexposurefp)
-    allnodes = pd.read_csv(allnodesfp)
-    lines = pd.read_csv(linesfp)
-    linesexposure = gpd.read_file(linesexposurefp)
-    powerplantsconsumers = pd.read_csv(powerplantsconsumersfp)
-    loads = pd.read_csv(loadsfp)
-    transformers = pd.read_csv(transformersfp)
-    
-    #print(allnodes)
-    
-    folderfp = 'network'
-    networkfp = 'network/network_valparaiso' # path to save output shape and GeoJSON files
-    
-    if not os.path.exists(folderfp):
-        os.mkdir(folderfp)
-    
-    pypsafp = 'valparaiso-with-load-gen-trafos' # path to save input data for Pypsa
-    if not os.path.exists(pypsafp):
-        os.mkdir(pypsafp)
-        
-    historicalfp = 'historical_data_chile' # path to databases of load and generation
-    historicalgen = pd.read_csv(historicalfp + '/SIC_DIC.csv') # historical generation database
+busesfp = 'red_chile/buses.csv'
+busesexposurefp = 'red_chile/buses_elec_exposure.csv'
+allnodesfp = 'red_chile/all_nodes.csv'
+linesexposurefp = 'red_chile/C1_EPN_ExposureLines_modified.shp'
+linesfp = 'red_chile/lines.csv'
+powerplantsconsumersfp = 'red_chile/power_plants_consumers.csv'
+loadsfp = 'red_chile/loads.csv'
+transformersfp = 'red_chile/transformers.csv'
+
+buses = pd.read_csv(busesfp)
+busesexposure = pd.read_csv(busesexposurefp)
+allnodes = pd.read_csv(allnodesfp)
+lines = pd.read_csv(linesfp)
+linesexposure = gpd.read_file(linesexposurefp)
+powerplantsconsumers = pd.read_csv(powerplantsconsumersfp)
+loads = pd.read_csv(loadsfp)
+transformers = pd.read_csv(transformersfp)
+
+#print(allnodes)
+
+folderfp = 'network'
+networkfp = 'network/network_valparaiso' # path to save output shape and GeoJSON files
+
+if not os.path.exists(folderfp):
+    os.mkdir(folderfp)
+
+pypsafp = 'valparaiso-with-load-gen-trafos' # path to save input data for Pypsa
+if not os.path.exists(pypsafp):
+    os.mkdir(pypsafp)
+
+historicalfp = 'historical_data_chile' # path to databases of load and generation
+historicalgen = pd.read_csv(historicalfp + '/SIC_DIC.csv') # historical generation database
+
+data_generationfp = 'red_chile/Generacion_bruta_horaria_SIC_2017/Diciembre/GeneracionBrutaHorariaSIC_1480923703947556098.xlsx'
+data_generation = pd.read_excel(data_generationfp, sep='\s+', parse_dates={'datetime': [1, 2, 3]}, index_col='datetime', date_parser=parser)
+
+data_linesfp = 'red_chile/Measurements_lines/OP171228.xls' # path to data of measurements in transmission lines
+data_lines = pd.read_excel(data_linesfp, sheet_name='Tx', header=3) # data of measurements in transmission lines
+
+data_loadfp = 'red_chile/Load_SIC/SIC_DIC.csv' # path to data of hourly load for every month
+data_load = pd.read_csv(data_loadfp) # Read excel file with data of hourly load for every month
         
 def build_buses():
     # Creates file for the buses including buses of electrical analysis, power plants and consumers of exposure file and loads GEOJson and shape formats and creates indiviual shape files
@@ -389,6 +398,53 @@ def gen_time_series():
     # Save file
     generation.to_csv(pypsafp +'/generators-p_set.csv', index=False)
     #print(generation)
+   
+def parser_load(date_string):
+    # Function to read of a specific format from a csv or excel file
+    return datetime.strptime(year+'Dec'+date_string, '%Y%b%d %H')
+    
+def load_time_series(year):
+    # Generate file 'loads-p_set.csv' with the power consumed in time for each load
+    # Translate month names, convert day and hour numbers to integer
+    #year = '2017'
+    data_load = pd.read_csv(data_loadfp) # Read excel file with data of hourly load for every month
+    data_load['DIANUM'] = data_load['DIANUM'].astype(int)
+    data_load['HoraDia'] = data_load['HoraDia'].astype(int)-1
+    data_load.loc[data_load['MESN'] == 'DIC', 'MESN'] = 'Dec'
+    data_load['year'] = year
+
+    dates_l = data_load['year'].map(str) + data_load['MESN'].map(str) + data_load['DIANUM'].map(str) + data_load['HoraDia'].map(str)
+    datestime = pd.to_datetime(dates_l.values, format='%Y%b%d%H')
+    data_load.index = datestime
+
+    #print(data_load)
+    
+    #Create dataframe with time series of load
+    consumption = pd.DataFrame(columns=numpy.append('name',loads['name']))
+    consumption['name'] = dates
+
+    for index, row in loads.iterrows():    
+        if(row['Assumption'] > 0):
+            consumption[row['name']] = row['Assumption']*row['p_factor']
+        if(row['Assumption'] == 0):          
+            names_loads = row['Load Name Database'].split('--') # loads in the database corresponding to the analized load in node
+            number_loads = len(names_loads)        
+            if(number_loads == 1):
+                consumption[row['name']] = data_load.loc[(data_load['Barra'] == row['Load Name Database']) & 
+                                                         (data_load['PuntoConexion'] == row['Point of Connection']) & 
+                                                         (data_load['Tipo2'] == row['User Type'])].loc[day, 'Total'].values
+
+            if(number_loads > 1):
+                points_connection = row['Point of Connection'].split('--')
+                user_types = row['User Type'].split('--')
+                consumption_node = numpy.zeros(24)    
+                for i in range(number_loads):        
+                    consumption_node += data_load.loc[(data_load['Barra'] == names_loads[i]) & 
+                                                      (data_load['PuntoConexion'] == points_connection[i]) & 
+                                                      (data_load['Tipo2'] == user_types[i])].loc[day, 'Total'].values
+                    consumption[row['name']] = consumption_node             
+    #consumption
+    consumption.to_csv(pypsafp +'/loads-p_set.csv', index=False)
     
 def evaluate_system_loads(G):
     read_files()
@@ -399,6 +455,9 @@ def evaluate_system_loads(G):
     day='2017-12-28'
     dates=time_stamps(day)    
     gen_time_series()
+    year = '2017'
+    load_time_series(year)
+   
     return G
 
 
