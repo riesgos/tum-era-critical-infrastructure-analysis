@@ -1,0 +1,53 @@
+name,bus,p_nom,carrier
+161,291,57.71,Diesel
+112,240,248.99,Brown Coal
+577,790,1.2,Diesel
+578,790,1.2,Diesel
+579,790,0.6,Diesel
+580,793,1.2,Diesel
+581,793,1.2,Diesel
+582,793,0.6,Diesel
+762,256,127.104,Diesel
+763,256,128.097,Diesel
+568,780,1.1,Diesel
+569,780,0.6,Diesel
+570,780,0.6,Diesel
+236,240,248.99,Brown Coal
+327,200,15.08,Diesel
+328,200,23.497,Diesel
+741,200,23.497,Diesel
+76,207,105.701,Brown Coal
+347,207,193.459,Brown Coal
+776,62T,197.39,Equivalente
+565,565,415.38,Equivalente
+565_110,565,406.25,Equivalente
+776_110kV,776_110kV,97.55,Equivalente
+605,605,223.68,Equivalente
+1746_525kV,1746_525kV,1803.07,Equivalente
+565_2,565,409.25,Equivalente
+565_3,565,409.25,Equivalente
+711_525kV,711_525kV,1803.07,Equivalente
+711_B,711,295.12,Equivalente
+711_C,711,818.5,Equivalente
+711_D,711,213.2,Equivalente
+711_E,711,260.88,Equivalente
+797,615,213,Natural Gas
+799,615,112.815,Natural Gas
+800,615,242.035,Natural Gas
+803,615,145.334,Natural Gas
+754,615,106.92,Diesel
+818,615,138.55,Natural Gas
+821,615,208.63,Natural Gas
+822,615,138,Natural Gas
+823,615,257.313,Natural Gas
+586,586,222.4,Equivalente
+586_1,586,42.11,Equivalente
+1990_1,1990,57.35,Equivalente
+72,1990,131.87,Diesel
+1990_2,1990,15.32,Equivalente
+1990_3,1990,20.08,Equivalente
+1990_4,1990,20.25,Equivalente
+1990_5,1990,49.92,Equivalente
+1791,1791,90.83,Solar
+1102,1102,108.31,Equivalente
+711_525kV_B,711_525kV,2355.6,Equivalente
