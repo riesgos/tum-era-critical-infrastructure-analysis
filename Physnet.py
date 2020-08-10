@@ -54,9 +54,11 @@ def parser_load(date_string):
     return datetime.strptime(year+'Dec'+date_string, '%Y%b%d %H')  
 
 day='2017-12-28'
-dates=time_stamps(day)    
-gen_time_series()
 year = '2017'
+dates=time_stamps(day)    
+pypsafp = 'valparaiso-with-load-gen-trafos' # path to save input data for Pypsa
+if not os.path.exists(pypsafp):
+    os.mkdir(pypsafp)
 
 busesfp = 'red_chile/buses.csv'
 busesexposurefp = 'red_chile/buses_elec_exposure.csv'
@@ -83,10 +85,6 @@ networkfp = 'network/network_valparaiso' # path to save output shape and GeoJSON
 
 if not os.path.exists(folderfp):
     os.mkdir(folderfp)
-
-pypsafp = 'valparaiso-with-load-gen-trafos' # path to save input data for Pypsa
-if not os.path.exists(pypsafp):
-    os.mkdir(pypsafp)
 
 historicalfp = 'historical_data_chile' # path to databases of load and generation
 historicalgen = pd.read_csv(historicalfp + '/SIC_DIC.csv') # historical generation database
@@ -500,8 +498,7 @@ def pypsa_network():
     print('Angle of Voltage in Buses - Degrees:')
     print(network.buses_t.v_ang*180/numpy.pi)
 
-    print('Magnitude of Voltage in Buses - Per Unit
-          :')
+    print('Magnitude of Voltage in Buses - Per Unit:')
     print(network.buses_t.v_mag_pu)
 
     
@@ -715,7 +712,8 @@ def evaluate_system_loads():
     build_buses()
     straight_lines()
     build_lines()
-    pypsa_network_files()     
+    pypsa_network_files()
+    gen_time_series()
     load_time_series(year)
     network = pypsa_network()
     lines_measur_results(network)
