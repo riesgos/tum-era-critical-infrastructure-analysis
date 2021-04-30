@@ -7,7 +7,10 @@ Python module for network simulation. Contains the main steps of the Monte Carlo
     - other functions:
         - Network update: removes failed/isolated source and consumer nodes, and updates surviving component capacities, 
         for recomputing the loads during the simulation of cascading effects
+        - Node and edge ODBC: Computes the Origin-Destination Betweenness Centrality (ODBC) to nodes and edges
+        - Load evaluation: assigns loads to the nodes and edges based on the ODBC
         - Is edge in path?: returns true or false, depending whether an edge is in a given path.
+        
 
 Created on Wed Aug 14 14:49:53 2019
 
@@ -36,29 +39,58 @@ def direct_hazard_action(G):
                 if r_value<n_pof:
                     G.nodes[node][cons.NODE_DAMAGE]=1
 
-# UPDATE SOURCE AND CONSUMER NODES; AND EDGE WEIGHTS
-# The damage increment DELTADAMAGE is reset to zero after updating the damage of the components
-def update_network(G,s_nodes,c_nodes):
+'''UPDATE SOURCE AND TERMINAL NODES; AND EDGE WEIGHTS
+The damage increment DELTADAMAGE is reset to zero after updating the damage of the components'''
+def update_network(G,s_nodes,t_nodes):
     # first, reduce node capacities
     for node in G.nodes():
+        
+
         # if damage is larger than the critical damage (e.g. by hazard action), set capacity to zero
         if G.nodes[node][cons.NODE_DAMAGE]>cons.CRIT_DAMAGE:
+            # remove this node from source and terminal nodes list
             if node in s_nodes:
                 s_nodes.remove(node)
-            if node in c_nodes:
-                c_nodes.remove(node)
+            if node in t_nodes:
+                t_nodes.remove(node)
             G.nodes[node][cons.CAPACITY]=0.0
-            # damaged node also makes its edges unavailable
+            G.nodes[node][cons.NODE_DAMAGE]=1
+            # and isolate the node
             for edge in G.edges(node):
                G.edges[edge][cons.WEIGHT]=1/cons.EPS 
                G.edges[edge][cons.CAPACITY]=0
                G.edges[edge][cons.LINE_DAMAGE]=1
-                
+               
         #otherwise, only reduce capacity
         else:
             G.nodes[node][cons.CAPACITY]-=G.nodes[node][cons.NODE_DELTADAMAGE]*G.nodes[node][cons.CAPACITY]
-            #we already applied the damage increment
+            #we already added the damage increment to the total damage, hence reset the increment to zero 
             G.nodes[node][cons.NODE_DELTADAMAGE]=0.0
+    
+    # now check whether any consumer node is disconnected from the network, and reduce capacity of edges adjacent to damaged nodes
+    for node in G.nodes():       
+        # not connected consumers to sources makes them unavailable too
+        if G.nodes[node][cons.TAXONOMY].upper()==cons.CONSUMER.upper():
+            stillpath=False
+            for snod in s_nodes:
+                spl=nx.shortest_path_length(G,snod,node,weight=cons.WEIGHT)
+                #print('from '+snod+' to '+node+': '+str(spl))
+                # if there is still a path with "reasonably" finite length, we are done. We take "infinity" as 0.5/EPS
+                if spl<0.5/cons.EPS:
+                    stillpath=True
+                    break
+            # if no shortest path exists from any source node, that consumer is isolated
+            if not stillpath:
+                G.nodes[node][cons.NODE_DAMAGE]=1#here damage 1 means "disconnected"
+                #all adjacent distribution lines have no power. We represent this with damage 1 as well
+                for edge in G.edges(node):
+                   G.edges[edge][cons.WEIGHT]=1/cons.EPS 
+                   G.edges[edge][cons.CAPACITY]=0
+                   G.edges[edge][cons.LINE_DAMAGE]=1
+
+            
+            
+          
     # now, increase edge cost and reduce their capacities
     for edge in G.edges():
         # if damage is larger than the critical damage, set capacity to zero and weight arbitrarily large
@@ -71,51 +103,24 @@ def update_network(G,s_nodes,c_nodes):
         #we already applied the damage increment
         G.edges[edge][cons.LINE_DELTADAMAGE]=0.0
 
-
-def evaluate_system_loads(G,s_nodes,c_nodes):
-
+''' Determines shortest paths between all source and target nodes, and assigns them
+to the nodes and edges as loads through the Origin-Destination betweenness cetrality'''
+def evaluate_system_loads(G,s_nodes,t_nodes):
     loads_initial={}
-    edge_loads_initial={}   
-    # Determine shortest path between all source and target nodes and set
-    # the nr of shortest paths passing through each node in network as
-    # initialize loads with 1 for assigning a minimum non zero capacity to each component
-    #loads_initial={no:1 for no in G.nodes()}
-    #edge_loads_initial={ed:1 for ed in G.edges()}
-    # evaluate inital origin-destination betweenness centrality
-    # determine initial number of connecting paths from all source node to
-    # each supply node
-    #print('\t start load evaluation')
-    #path_dict=nx.shortest_path(G,weight=cons.WEIGHT)
-    #i_s=0
+    edge_loads_initial={}
     param_k=min(30,len(G.nodes()))
-    loads_initial=OD_node_betweenness_centrality(G,s_nodes,c_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
+    loads_initial=OD_node_betweenness_centrality(G,s_nodes,t_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
     #edge_loads_initial=nx.edge_betweenness_centrality(G,weight=cons.WEIGHT,normalized=False,k=param_k)
-    edge_loads_initial=OD_edge_betweenness_centrality(G,s_nodes,c_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
-    #for s_node in s_nodes:
-        #print('\t source node Nr. '+str(i_s))
-        #i_s=i_s+1
-        #for c_node in c_nodes: 
-            #try:
-                #a_path=path_dict[s_node][c_node] 
-            #except:
-                #continue
-            #for node in G.nodes():
-                #if node in a_path:
-                    #loads_initial[node]+=1
-            #for edge in G.edges():
-                #if is_edge_in_path(edge,a_path):
-                    #edge_loads_initial[edge]+=1
-    
-    # calculate initial capacity of each node using alpha factors
+    edge_loads_initial=OD_edge_betweenness_centrality(G,s_nodes,t_nodes,weight=cons.WEIGHT,normalized=False,k=param_k)
     node_attribs={no:{cons.LOAD:loads_initial[no]} for no in G.nodes()}
     edge_attribs={ed:{cons.LOAD:edge_loads_initial[ed]} for ed in G.edges()}
     nx.set_node_attributes(G,node_attribs)
     nx.set_edge_attributes(G,edge_attribs)
 
-#   CASCADING EFFECTS
-#   Updates component state vector with failures due to nodes disconnection
-#   and overloading
-def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
+'''CASCADING EFFECTS
+Updates component state vector with failures due to nodes disconnection
+and overloading'''
+def simulate_cascading_effects(G,s_nodes,t_nodes,max_iteration):
     iteration_casc=0
     component_state=0
     component_state_upd=1
@@ -126,7 +131,7 @@ def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
         
         # DISCONNECTION FAILURE
         # assess perturbed network
-        evaluate_system_loads(G,s_nodes,c_nodes)
+        evaluate_system_loads(G,s_nodes,t_nodes)
         n_loads=nx.get_node_attributes(G,cons.LOAD)
         e_loads=nx.get_edge_attributes(G,cons.LOAD)
         n_caps=nx.get_node_attributes(G,cons.CAPACITY)
@@ -162,25 +167,33 @@ def simulate_cascading_effects(G,s_nodes,c_nodes,max_iteration):
                         G.edges[edge][cons.LINE_DELTADAMAGE]=e_state
                     else:
                         G.edges[edge][cons.LINE_DELTADAMAGE]=G.edges[edge][cons.LINE_DAMAGE]-(1-e_state)
-        update_network(G,s_nodes,c_nodes)
+        update_network(G,s_nodes,t_nodes)
         component_state_upd={cons.NODES:nx.get_node_attributes(G,cons.NODE_DAMAGE),cons.EDGES:nx.get_edge_attributes(G,cons.LINE_DAMAGE)}
         iteration_casc+=1
     #return component_state_upd
         
-# estimate affectation to consumer areas
+'''estimate affectation to consumer areas'''
 
 def set_state_consumers(ExposureConsumerAreas,Graph):
-    areas_damage=[]
+    areas_damage=[]#store the areas states in a vector. 0 means ok, 1 means blackout
     for i in range(0,len(ExposureConsumerAreas[cons.FEATURES])):
         key_a_name=ExposureConsumerAreas[cons.FEATURES][i][cons.PROPERTIES][cons.AREA_NAME]
-        if len(Graph.edges(key_a_name))>0:
-            supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]           
-            if np.mean(supply_edge_dam)>cons.CRIT_DAMAGE:
-                areas_damage.append(1)# 1 means has a blackout
+        # if consumer node itself is not connected to source, then area has blackout
+        if Graph.nodes[key_a_name][cons.NODE_DAMAGE]>1-cons.EPS:
+            areas_damage.append(1)# 1 means has a blackout
+        # otherwise, check how "strong" are the connections
+        else:
+            # if the consumer area has a consumer node connected to the network
+            if len(Graph.edges(key_a_name))>0:
+                supply_edge_dam=[Graph.edges[edge][cons.LINE_DAMAGE] for edge in Graph.edges(key_a_name)]   
+                # if adjacent lines have on average a large damage level
+                if np.mean(supply_edge_dam)>cons.CRIT_DAMAGE:
+                    areas_damage.append(1)# 1, then the area has a blackout
+                else:
+                    areas_damage.append(0)# 0, otherwise the area has no blackout
+            # Otherwisethe area is isolated (lines removed, damaged, or they never were in model)
             else:
-                areas_damage.append(0)# 0 means no blackout
-        else:#it is an isolated consumer area (no service)
-            areas_damage.append(1)
+                areas_damage.append(1)
     return areas_damage
 
 # IS AN EDGE IN A PATH?
@@ -194,7 +207,7 @@ def is_edge_in_path(edge,path):
     
 def OD_node_betweenness_centrality(G, s_nodes, c_nodes, k=None, normalized=True, weight=None,
                                 seed=None):
-    r"""Compute betweenness centrality for edges, considering paths between source and consumer nodes.
+    """Compute betweenness centrality for edges, considering paths between source and consumer nodes.
     
     This function is a modified version of networkx package function edge_betweenness_centrality()
 

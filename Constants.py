@@ -11,7 +11,7 @@ Created on Wed Aug 14 11:58:25 2019
 
 # useful constants for the functions
 MIN_DAMAGE=0.1 #minimum acceptable damage. Effects from smaller damage levels are neglected
-CRIT_DAMAGE=0.5 #critical damage level. A component fails if its damage level is larger or equal than this threshold
+CRIT_DAMAGE=0.9 #critical damage level. A component fails if its damage level is larger or equal than this threshold
 EPS=1e-100 #epsilon constant for avoiding divisions by zero
 EDGES='edges'#keyword for edges in dictionary
 NODES='nodes'#keyword for nodes in dictionary
@@ -61,3 +61,4 @@ TAXONOMY="taxonomy"
 TAXONOMIES="taxonomies"
 SOURCE="source"
 CONSUMER="consumer"
+TERMINAL="terminal"

@@ -1,48 +1,48 @@
 {
     "data": [{
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Substation",
         "im_min": 0.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }, {
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Boundary Substation",
         "im_min": 0.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }, {
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Reducer Substation",
         "im_min": 0.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }, {
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Tap",
         "im_min": 1.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
-    },{
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+    }, {
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Boundary Tap",
         "im_min": 1.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }, {
         "D3_mean": 12.0,
@@ -50,17 +50,17 @@
         "taxonomy": "Consumer",
         "im_min": 0.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }, {
-        "D3_mean": 0.0,
-        "D3_stddev": 0.0001,
+        "D3_mean": 1.77,
+        "D3_stddev": 1.56,
         "taxonomy": "Power Plant",
         "im_min": 1.0,
         "im_max": 12.0,
-        "imu": "m",
-        "imt": "Maxheight",
+        "imu": "mm",
+        "imt": "Thick",
         "id": "unique_id"
     }],
     "meta": {
@@ -74,8 +74,8 @@
         "format": "continuous",
         "description": "Lahar Fragility Model, project RIESGOS",
         "id": "Wilson-Zuccaro_v1.0",
-        "damage_states": "Wilson-Zuccaro",
+        "damage_states": "Wardman et al. (2013)",
         "limit_states": ["D3"],
-        "taxonomy_source": "Wilson et. al. (2014) and Zuccaro & De Gregorio (2013)"
+        "taxonomy_source": "Wardman et al. (2013)"
     }
 }

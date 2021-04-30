@@ -1,0 +1,54 @@
+{
+    "data": [{
+        "D3_mean": 2.44,
+        "D3_stddev": 0.55,
+        "taxonomy": "Substation",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m",
+        "imt": "depth",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 2.44,
+        "D3_stddev": 0.55,
+        "taxonomy": "Tap",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m",
+        "imt": "depth",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 12,
+        "D3_stddev": 0.0,
+        "taxonomy": "Consumer",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m",
+        "imt": "depth",
+        "id": "unique_id"
+    }, {
+        "D3_mean": 2.44,
+        "D3_stddev": 0.55,
+        "taxonomy": "Power Plant",
+        "im_min": 1.0,
+        "im_max": 12.0,
+        "imu": "m",
+        "imt": "depth",
+        "id": "unique_id"
+    }],
+    "meta": {
+        "shape": "normcdf",
+        "lossCategory": "structural",
+        "taxonomies": ["Substation", "Tap", "Consumer", "Power Plant"],
+        "no_damage": "D0",
+        "assetCategory": "power network",
+        "source": "Power Plant",
+        "terminal": "Consumer",
+        "format": "continuous",
+        "description": "Tsunami Fragility Model, project RIESGOS",
+        "id": "Aranguiz_v1.0",
+        "damage_states": "",
+        "limit_states": ["D3"],
+        "taxonomy_source": "Aranguiz et. al. (2018)"
+    }
+}

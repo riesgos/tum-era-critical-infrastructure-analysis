@@ -21,13 +21,11 @@ import Constants as cons
 import Netsim as ns
 ##### ----------------------------- Functions called in the main file ---------------------------------########
 
-# Create the graph from geojson files
+'''Create the graph from geojson files''' 
 def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
-    node_types_keys=NetworkFragility[cons.META][cons.TAXONOMIES]
-    G=nx.Graph()
-    EdgesFea=ExposureLines[cons.FEATURES]
-    NodesFea=DamageNodes[cons.FEATURES] 
-    NodeBunch={}
+    G=nx.Graph()#initialize graph
+    EdgesFea=ExposureLines[cons.FEATURES]#extract edge features
+    NodesFea=DamageNodes[cons.FEATURES] #extract node features
     #Initialize attributes for nodes and edges
     NodeBunch={NodesFea[i][cons.PROPERTIES][cons.NODE_NAME]:{
             cons.TAXONOMY:'',
@@ -49,9 +47,10 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
             cons.LOAD:1.0,
             cons.CAPACITY:1.0
             }) for i in range(0,len(EdgesFea))]
+    # add edges to G (nodes are initialized too, without attributes)
     G.add_edges_from(EdgeBunch)
-    del EdgeBunch
-        
+    del EdgeBunch# save memory
+    # add attributes to the initialized nodes     
     nx.set_node_attributes(G,NodeBunch)
     #set node attributes (only from 'properties' key)
     for attr in NodesFea[0][cons.PROPERTIES].keys():
@@ -65,7 +64,7 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
         nx.set_edge_attributes(G,EdgeAttr)
     #update the weights; depending on available data 
     EdgeWeights={}
-    #try desired case: weightL*X, (L*sqrt(R^2+X^2), R<<X), R: resistance, X: reactance
+    #try the desired case: weightL*X, (L*sqrt(R^2+X^2), R<<X), R: resistance, X: reactance
     try:
         #EdgeWeights={(EdgesFea[i][cons.PROPERTIES][cons.FROM],EdgesFea[i][cons.PROPERTIES][cons.TO]):
             #{cons.WEIGHT:float(EdgesFea[i][cons.PROPERTIES][cons.LENGTH])*
@@ -87,40 +86,40 @@ def load_network_data(DamageNodes,ExposureLines,NetworkFragility):
     nx.set_edge_attributes(G,EdgeWeights)
     # create a dictionary of node lists by taxonomy
     Types=nx.get_node_attributes(G,cons.NODE_TYPE)
-    #node_types={typ:[nod for nod in G.nodes() if Types[nod]==typ] for typ in node_types_keys}
     source=NetworkFragility[cons.META][cons.SOURCE]
-    consumer=NetworkFragility[cons.META][cons.CONSUMER]
+    terminal=NetworkFragility[cons.META][cons.TERMINAL]
     s_nodes=[nod for nod in G.nodes() if Types[nod] in source]
-    c_nodes=[nod for nod in G.nodes() if Types[nod] in consumer]
-    return G,s_nodes,c_nodes
+    t_nodes=[nod for nod in G.nodes() if Types[nod] in terminal]
+    return G,s_nodes,t_nodes
 
-# evaluation of system loads
-# load is computed as the number of shortest paths that pass through the component (node or edge)
-def evaluate_system_loads(G,s_nodes,c_nodes):
-    ns.evaluate_system_loads(G,s_nodes,c_nodes)
+'''evaluation of system loads
+load is computed as the number of shortest paths that pass through the component (node or edge)'''
+def evaluate_system_loads(G,s_nodes,t_nodes):
+    ns.evaluate_system_loads(G,s_nodes,t_nodes)
 
-#Assign component capacities
+'''Assign component capacities'''
 def assign_initial_capacities(G,alpha):
     node_caps={no:{cons.CAPACITY:alpha*G.nodes[no][cons.LOAD]} for no in G.nodes()}
     edge_caps={ed:{cons.CAPACITY:alpha*G.edges[ed][cons.LOAD]} for ed in G.edges()}
     nx.set_node_attributes(G,node_caps)
     nx.set_edge_attributes(G,edge_caps)
 
-# MONTE CARLO SIMULATION
-
-def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs):
+'''MONTE CARLO SIMULATION''' 
+def run_Monte_Carlo_simulation(Graph,s_nodes0,t_nodes0,ExposureConsumerAreas,mcs):
     #component_state_dha=[]
     #component_state_idp=[]
     #store samples of affected areas in a list
     affected_areas=[]
     max_iteration=5#max number of iterations in simulation of cascading effects
+    # here starts the MCS
     for i in range(0,mcs):
         i_component_state_dha={}
         #i_component_state_casc={}
-        #modify the networks in a copy of them
+        #modify the network in a copy
         NetG=copy.deepcopy(Graph)
+        #likewise for the source and terminal list
         s_nodes=copy.deepcopy(s_nodes0)
-        c_nodes=copy.deepcopy(c_nodes0)
+        t_nodes=copy.deepcopy(t_nodes0)
         ## Direct Hazard Action
         # Simulate effects of hazard action on components
         ns.direct_hazard_action(NetG)
@@ -129,24 +128,24 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
         i_component_state_dha={cons.NODES:nx.get_node_attributes(NetG,cons.NODE_DAMAGE),cons.EDGES:nx.get_edge_attributes(NetG,cons.LINE_DAMAGE)}
         #component_state_dha.append(i_component_state_dha)
         
-        # Update network description (weights and capacities)
-        ns.update_network(NetG,s_nodes,c_nodes)    
+        # Update network description: weights and capacities, and remove damaged nodes from source and terminal lists
+        ns.update_network(NetG,s_nodes,t_nodes)    
 
-        # at least one component has significant damage (>10% damage)
+        # if at least one component has significant damage, we simulate cascading effects
         if max(i_component_state_dha[cons.NODES].values())>cons.MIN_DAMAGE or max(i_component_state_dha[cons.EDGES].values())>cons.MIN_DAMAGE:
             #i_component_state_casc=i_component_state_dha
             ## Damage Propagation
-            # if there are surviving supply and consumtion nodes
-            if len(s_nodes)>0 and len(c_nodes)>0:
+            # if there are surviving source and terminal nodes
+            if len(s_nodes)>0 and len(t_nodes)>0:
                 # cascading effects
-                ns.simulate_cascading_effects(NetG,s_nodes,c_nodes,max_iteration)
-            #else:
-            # loss of functionality, i.e. no more flow in network
-            ns.update_network(NetG,s_nodes,c_nodes)                         
+                ns.simulate_cascading_effects(NetG,s_nodes,t_nodes,max_iteration)
+            #otherwise, loss of functionality, i.e. no more flow in network
+            # in any case, update the network
+            ns.update_network(NetG,s_nodes,t_nodes)                         
                   
-        # no disconnection or cascading failures in this network              
+        # otherwise, no disconnection or cascading failures in this network              
             
-        # Save Results
+        # Save Results (here the consumer areas)
         #component_state_idp.append(i_component_state_casc)
         i_affected_areas=ns.set_state_consumers(ExposureConsumerAreas,NetG)
         affected_areas.append(i_affected_areas)
@@ -155,7 +154,7 @@ def run_Monte_Carlo_simulation(Graph,s_nodes0,c_nodes0,ExposureConsumerAreas,mcs
     return affected_areas
 
 
-#Post Processing
+#Post Processing: transform damaged areas into affected population
 def compute_output(SampleDamageAreas,ExposureConsumerAreas,nmcs):
     SampleDamageNetwork=[int(np.sum([SampleDamageAreas[i][i_area]*ExposureConsumerAreas[cons.FEATURES][i_area][cons.PROPERTIES][cons.AREA_POPULATION]
     for i_area in range(0,len(SampleDamageAreas[0]))])) for i in range(0,nmcs)]

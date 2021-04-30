@@ -1,6 +1,6 @@
 {
     "data": [{
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Substation",
         "im_min": 0.0,
@@ -9,7 +9,7 @@
         "imt": "Maxvelocity",
         "id": "unique_id"
     }, {
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Boundary Substation",
         "im_min": 0.0,
@@ -18,7 +18,7 @@
         "imt": "Maxvelocity",
         "id": "unique_id"
     }, {
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Reducer Substation",
         "im_min": 0.0,
@@ -27,7 +27,7 @@
         "imt": "Maxvelocity",
         "id": "unique_id"
     }, {
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Tap",
         "im_min": 1.0,
@@ -36,7 +36,7 @@
         "imt": "Maxvelocity",
         "id": "unique_id"
     }, {
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Boundary Tap",
         "im_min": 1.0,
@@ -54,7 +54,7 @@
         "imt": "Maxvelocity",
         "id": "unique_id"
     }, {
-        "D3_mean": 1.0,
+        "D3_mean": 0.0,
         "D3_stddev": 0.0001,
         "taxonomy": "Power Plant",
         "im_min": 1.0,
@@ -66,11 +66,11 @@
     "meta": {
         "shape": "logncdf",
         "lossCategory": "structural",
-        "taxonomies": ["Substation","Boundary Substation", "Reducer Substation","Tap", "Consumer", "Power Plant"],
+        "taxonomies": ["Substation","Boundary Substation", "Reducer Substation","Tap", "Consumer", "Power Plant","Boundary Tap"],
         "no_damage": "D0",
         "assetCategory": "power network",
         "source": "Power Plant",
-        "consumer": "Consumer",
+        "terminal": "Consumer",
         "format": "continuous",
         "description": "Lahar Fragility Model, project RIESGOS",
         "id": "Wilson-Zuccaro_v1.0",
