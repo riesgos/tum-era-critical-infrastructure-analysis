@@ -37,7 +37,7 @@ def run_network_simulation(DamageNodes, ExposureLines, NetworkFragility, Exposur
     alpha=1.5#safety factor (>=1.0) for estimating capacity based on initial loads 
     sr.assign_initial_capacities(Graph,alpha)
     ##### ----------------------------- Monte Carlo Simulation --------------------------########
-    nmcs=20 #number of samples
+    nmcs=50 #number of samples
     # obtain samples of affected areas
     SampleAreas=sr.run_Monte_Carlo_simulation(Graph,source_nodes,consumer_nodes,ExposureConsumerAreas,nmcs)
     ##### ----------------------------- Post Processing ---------------------------------########
